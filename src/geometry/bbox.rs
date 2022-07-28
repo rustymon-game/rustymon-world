@@ -71,6 +71,7 @@ impl BBox {
     }
 
     /// Check if two bounding boxes intersect
+    #[allow(dead_code)]
     pub fn intersects_box(&self, other: BBox) -> bool {
         self.contains(other.min)
             || self.contains(other.max)

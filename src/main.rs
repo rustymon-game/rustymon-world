@@ -1,14 +1,13 @@
 use crate::formats::Constructable;
+use crate::generator::WorldGenerator;
 use crate::geometry::BBox;
 use clap::Parser;
 use nalgebra::Vector2;
-use osmium::area::Area;
 use osmium::handler::{apply_with_areas, AreaAssemblerConfig, Handler};
-use osmium::node::{Node, NodeRef};
-use osmium::way::Way;
 use std::ffi::CString;
 
 mod formats;
+mod generator;
 mod geometry;
 
 #[derive(Parser, Debug)]
@@ -18,72 +17,25 @@ struct Args {
     #[clap(value_parser)]
     file: String,
 
-    /// Smallest Latitude to process
+    /// Longitude of center
     #[clap(value_parser)]
-    min_y: f64,
+    center_y: f64,
 
-    /// Smallest Longitude to process
+    /// Latitude of center
     #[clap(value_parser)]
-    min_x: f64,
+    center_x: f64,
 
-    /// Biggest Latitude to process
-    #[clap(value_parser)]
-    max_y: f64,
+    /// Number of columns
+    #[clap(short, long, value_parser)]
+    cols: Option<usize>,
 
-    /// Biggest Longitude to process
-    #[clap(value_parser)]
-    max_x: f64,
-}
+    /// Number of rows
+    #[clap(short, long, value_parser)]
+    rows: Option<usize>,
 
-struct WorldGenerator<T: Constructable> {
-    /// Bounding box to clip everything to
-    bbox: BBox,
-
-    /// The output format's instance which is being constructed
-    constructing: T,
-}
-impl<T: Constructable> WorldGenerator<T> {
-    pub fn new(bbox: BBox) -> WorldGenerator<T> {
-        WorldGenerator {
-            bbox,
-            constructing: T::new(),
-        }
-    }
-}
-impl<T: Constructable> Handler for WorldGenerator<T> {
-    fn area(&mut self, area: &Area) {
-        for ring in area.outer_rings() {
-            let polygon = ring
-                .iter()
-                .map(NodeRef::get_location)
-                .flatten()
-                .map(|l| Vector2::new(l.lon(), l.lat()));
-            let polygon = self.bbox.clip_polygon(polygon);
-            if polygon.len() > 0 {
-                self.constructing.add_area(polygon);
-            }
-        }
-    }
-
-    fn node(&mut self, node: &Node) {
-        let location = node.location();
-        if location.is_defined() && location.is_valid() {
-            let point = Vector2::new(location.lon(), location.lat());
-            if self.bbox.contains(point) {
-                self.constructing.add_node(point);
-            }
-        }
-    }
-
-    fn way(&mut self, way: &Way) {
-        let path = way
-            .nodes()
-            .iter()
-            .map(NodeRef::get_location)
-            .flatten()
-            .map(|l| Vector2::new(l.lon(), l.lat()));
-        self.constructing.extend_ways(self.bbox.clip_path(path));
-    }
+    /// Tile's width in degrees
+    #[clap(short, long, value_parser)]
+    degree: Option<f64>,
 }
 
 fn main() {
@@ -91,11 +43,13 @@ fn main() {
 
     let file = CString::new(args.file).expect("File path contained NUL character");
 
-    let bbox = BBox {
-        min: Vector2::new(args.min_x, args.min_y),
-        max: Vector2::new(args.max_x, args.max_y),
-    };
-    let mut handler: WorldGenerator<formats::Pytest> = WorldGenerator::new(bbox);
+    let step_num = (args.cols.unwrap_or(1), args.rows.unwrap_or(1));
+    let step_size = args.degree.unwrap_or(0.01);
+    let step_size = Vector2::new(step_size, step_size);
+    let center = Vector2::new(args.center_x, args.center_y);
+
+    let mut handler: WorldGenerator<formats::Pytest> =
+        WorldGenerator::new(center, step_num, step_size);
 
     unsafe {
         apply_with_areas(
@@ -108,5 +62,6 @@ fn main() {
         );
     }
 
-    serde_json::to_writer(std::io::stdout(), &handler.constructing).expect("Couldn't output");
+    serde_json::to_writer(std::io::stdout(), &handler.handlers[0].constructing)
+        .expect("Couldn't output");
 }
