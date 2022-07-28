@@ -1,4 +1,4 @@
-use crate::formats::{pytest, Constructable};
+use crate::formats::Constructable;
 use crate::geometry::BBox;
 use clap::Parser;
 use nalgebra::Vector2;
@@ -18,18 +18,28 @@ struct Args {
     #[clap(value_parser)]
     file: String,
 
-    #[clap(value_parser)]
-    min_x: f64,
+    /// Smallest Latitude to process
     #[clap(value_parser)]
     min_y: f64,
+
+    /// Smallest Longitude to process
     #[clap(value_parser)]
-    max_x: f64,
+    min_x: f64,
+
+    /// Biggest Latitude to process
     #[clap(value_parser)]
     max_y: f64,
+
+    /// Biggest Longitude to process
+    #[clap(value_parser)]
+    max_x: f64,
 }
 
 struct WorldGenerator<T: Constructable> {
+    /// Bounding box to clip everything to
     bbox: BBox,
+
+    /// The output format's instance which is being constructed
     constructing: T,
 }
 impl<T: Constructable> WorldGenerator<T> {
@@ -85,7 +95,7 @@ fn main() {
         min: Vector2::new(args.min_x, args.min_y),
         max: Vector2::new(args.max_x, args.max_y),
     };
-    let mut handler: WorldGenerator<pytest::Tile> = WorldGenerator::new(bbox);
+    let mut handler: WorldGenerator<formats::Pytest> = WorldGenerator::new(bbox);
 
     unsafe {
         apply_with_areas(

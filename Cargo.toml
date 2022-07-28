@@ -1,5 +1,5 @@
 [package]
-name = "rustymonWorld"
+name = "rustymon_world"
 version = "0.1.0"
 edition = "2021"
 

@@ -7,7 +7,7 @@ pub struct BBox {
     pub max: Vector2<f64>,
 }
 
-/// Helper for BBox::clip_polygon
+/// High-level syntax for the `intersect` argument in [`BBox::clip_polygon_on_line`]
 macro_rules! intersect_with {
     ($x:ident = $value:expr) => {
         |from: Vector2<f64>, to: Vector2<f64>| -> Vector2<f64> {
@@ -17,6 +17,7 @@ macro_rules! intersect_with {
         }
     };
 }
+/// High-level syntax for the `is_inside` argument to [`BBox::clip_polygon_on_line`]
 macro_rules! keep {
     ($x:ident < $value:expr) => {
         |point: Vector2<f64>| -> bool { point.$x < $value }
