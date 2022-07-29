@@ -1,4 +1,4 @@
-use crate::{BBox, Constructable};
+use crate::{geometry, BBox, Constructable};
 use nalgebra::Vector2;
 use osmium::area::Area;
 use osmium::handler::Handler;
@@ -81,7 +81,9 @@ impl<T: Constructable> Handler for TileGenerator<T> {
                 .map(NodeRef::get_location)
                 .flatten()
                 .map(|l| Vector2::new(l.lon(), l.lat()));
-            let polygon = self.bbox.clip_polygon(polygon);
+
+            let polygon = Vec::from_iter(geometry::iter::clip_polygon(polygon, self.bbox));
+
             if polygon.len() > 0 {
                 self.constructing.add_area(polygon);
             }
