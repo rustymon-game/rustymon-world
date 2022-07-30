@@ -1,6 +1,4 @@
-use crate::formats::Constructable;
 use crate::generator::WorldGenerator;
-use crate::geometry::BBox;
 use clap::Parser;
 use nalgebra::Vector2;
 use osmium::handler::{apply_with_areas, AreaAssemblerConfig, Handler};
@@ -62,6 +60,10 @@ fn main() {
         );
     }
 
-    serde_json::to_writer(std::io::stdout(), &handler.handlers[0].constructing)
-        .expect("Couldn't output");
+    let tiles: Vec<formats::Pytest> = handler
+        .tiles
+        .into_iter()
+        .map(|tile| tile.constructing)
+        .collect();
+    serde_json::to_writer(std::io::stdout(), &tiles).expect("Couldn't output");
 }

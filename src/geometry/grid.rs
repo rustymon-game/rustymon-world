@@ -5,11 +5,12 @@ use smallvec::SmallVec;
 pub struct Grid<T: GridTile> {
     pub bbox: BBox,
     pub step: Vector2<f64>,
-    pub size: Vector2<isize>,
+    size: Vector2<isize>,
     pub tiles: Vec<T>,
 }
 
 pub trait GridTile {
+    fn new(bbox: BBox) -> Self;
     fn path_enter(&mut self, point: Point);
     fn path_step(&mut self, point: Point);
     fn path_leave(&mut self, point: Point);
@@ -18,16 +19,35 @@ pub trait GridTile {
 pub type Index = Vector2<isize>;
 
 impl<T: GridTile> Grid<T> {
-    pub fn new(bbox: BBox, step: Vector2<f64>) -> Grid<T> {
-        let mut grid = Grid {
-            bbox,
-            step,
-            tiles: Vec::new(),
-            size: Vector2::zeros(),
-        };
-        grid.size = grid.lookup_point(grid.bbox.max);
-        grid.tiles = Vec::with_capacity((grid.size.x * grid.size.y) as usize);
-        grid
+    pub fn new(center: Vector2<f64>, step_num: (usize, usize), step_size: Vector2<f64>) -> Grid<T> {
+        let min = Vector2::new(
+            center.x - step_num.0 as f64 * step_size.x / 2.0,
+            center.y - step_num.1 as f64 * step_size.y / 2.0,
+        );
+
+        let mut boxes = Vec::with_capacity(step_num.0 * step_num.1);
+        for x in 0..step_num.0 {
+            for y in 0..step_num.1 {
+                let min = Vector2::new(
+                    min.x + x as f64 * step_size.x,
+                    min.y + y as f64 * step_size.y,
+                );
+                boxes.push(BBox {
+                    min,
+                    max: min + step_size,
+                });
+            }
+        }
+
+        Grid {
+            bbox: BBox {
+                min,
+                max: boxes.last().unwrap().max,
+            },
+            step: step_size,
+            size: Index::new(step_num.0 as isize, step_num.1 as isize),
+            tiles: boxes.into_iter().map(T::new).collect(),
+        }
     }
 
     pub fn clip_path<I: IntoIterator<Item = Vector2<f64>>>(&mut self, path: I) {

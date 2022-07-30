@@ -5,7 +5,6 @@
 //!
 //! Each format implements the [`Constructable`] trait which allows it to be constructed using a generic interface.
 use crate::geometry::{BBox, Point};
-use nalgebra::Vector2;
 
 mod production;
 mod pytest;
