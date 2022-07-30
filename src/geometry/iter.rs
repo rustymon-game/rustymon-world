@@ -1,78 +1,32 @@
 #![allow(dead_code)]
-use super::bbox::BBox;
-use nalgebra::Vector2;
 
-/// High-level syntax for the `intersect` argument in [`BBox::clip_polygon_on_line`]
-macro_rules! intersect_with {
-    ($x:ident = $value:expr) => {
-        move |from: Vector2<f64>, to: Vector2<f64>| -> Vector2<f64> {
-            let delta = from - to;
-            let lambda = ($value - to.$x) / delta.$x;
-            delta * lambda + to
-        }
-    };
-}
-/// High-level syntax for the `is_inside` argument to [`BBox::clip_polygon_on_line`]
-macro_rules! keep {
-    ($x:ident < $value:expr) => {
-        move |point: Vector2<f64>| -> bool { point.$x < $value }
-    };
-    ($x:ident > $value:expr) => {
-        move |point: Vector2<f64>| -> bool { point.$x > $value }
-    };
-}
+use super::{bbox::BBox, Point};
+use crate::geometry::primitives::{Coord, Gt, HalfPlane, Lt, Ordering, X, Y};
 
 pub fn clip_polygon(
-    polygon: impl Iterator<Item = Vector2<f64>>,
+    polygon: impl Iterator<Item = Point>,
     bbox: BBox,
-) -> impl Iterator<Item = Vector2<f64>> {
-    let polygon = clip_polygon_on_line(
-        polygon,
-        keep!(y > bbox.min.y),
-        intersect_with!(y = bbox.min.y),
-    );
-    let polygon = clip_polygon_on_line(
-        polygon,
-        keep!(x < bbox.max.x),
-        intersect_with!(x = bbox.max.x),
-    );
-    let polygon = clip_polygon_on_line(
-        polygon,
-        keep!(y < bbox.max.y),
-        intersect_with!(y = bbox.max.y),
-    );
-    let polygon = clip_polygon_on_line(
-        polygon,
-        keep!(x > bbox.min.x),
-        intersect_with!(x = bbox.min.x),
-    );
+) -> impl Iterator<Item = Point> {
+    let polygon = HalfPlane(Y, Gt, bbox.min.y).iter_clip_polygon(polygon);
+    let polygon = HalfPlane(X, Lt, bbox.max.x).iter_clip_polygon(polygon);
+    let polygon = HalfPlane(Y, Lt, bbox.max.y).iter_clip_polygon(polygon);
+    let polygon = HalfPlane(X, Gt, bbox.min.x).iter_clip_polygon(polygon);
     polygon
 }
 
-pub fn clip_polygon_on_line(
-    polygon: impl Iterator<Item = Vector2<f64>>,
-    keep: impl Fn(Vector2<f64>) -> bool,
-    intersect: impl Fn(Vector2<f64>, Vector2<f64>) -> Vector2<f64>,
-) -> impl Iterator<Item = Vector2<f64>> {
-    ClipPolygonOnLineIter::new(polygon, keep, intersect)
-}
-
-struct ClipPolygonOnLineIter<P, K, I> {
+struct ClipPolygonOnLineIter<P, C: Coord, O: Ordering> {
     finished: bool,
-    left_yield: Option<Vector2<f64>>,
+    left_yield: Option<Point>,
     polygon: P,
-    previous: Vector2<f64>,
-    last: Vector2<f64>,
-    keep: K,
-    intersect: I,
+    previous: Point,
+    last: Point,
+    halfplane: HalfPlane<C, O>,
 }
-impl<P, K, I> ClipPolygonOnLineIter<P, K, I>
-where
-    P: Iterator<Item = Vector2<f64>>,
-    K: Fn(Vector2<f64>) -> bool,
-    I: Fn(Vector2<f64>, Vector2<f64>) -> Vector2<f64>,
-{
-    pub fn new(mut polygon: P, keep: K, intersect: I) -> ClipPolygonOnLineIter<P, K, I> {
+impl<C: Coord, O: Ordering> HalfPlane<C, O> {
+    pub fn iter_clip_polygon(
+        self,
+        mut polygon: impl Iterator<Item = Point>,
+    ) -> impl Iterator<Item = Point> {
         if let Some(previous) = polygon.next() {
             ClipPolygonOnLineIter {
                 finished: false,
@@ -80,34 +34,29 @@ where
                 polygon,
                 previous,
                 last: previous,
-                keep,
-                intersect,
+                halfplane: self,
             }
         } else {
             ClipPolygonOnLineIter {
                 finished: true,
                 left_yield: None,
                 polygon,
-                previous: Vector2::new(f64::NAN, f64::NAN),
-                last: Vector2::new(f64::NAN, f64::NAN),
-                keep,
-                intersect,
+                previous: Point::new(f64::NAN, f64::NAN),
+                last: Point::new(f64::NAN, f64::NAN),
+                halfplane: self,
             }
         }
     }
 }
-impl<P, K, I> Iterator for ClipPolygonOnLineIter<P, K, I>
+impl<P, C, O> Iterator for ClipPolygonOnLineIter<P, C, O>
 where
-    P: Iterator<Item = Vector2<f64>>,
-    K: Fn(Vector2<f64>) -> bool,
-    I: Fn(Vector2<f64>, Vector2<f64>) -> Vector2<f64>,
+    P: Iterator<Item = Point>,
+    C: Coord,
+    O: Ordering,
 {
-    type Item = Vector2<f64>;
+    type Item = Point;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let intersect = &self.intersect;
-        let keep = &self.keep;
-
         if let Some(left_yield) = self.left_yield.take() {
             Some(left_yield)
         } else if self.finished {
@@ -121,11 +70,12 @@ where
                 self.last
             };
 
-            let intersection = intersect(self.previous, current);
-            let keep_previous = keep(self.previous);
+            let intersection = self.halfplane.intersect(self.previous, current);
+            let keep_previous = self.halfplane.contains(self.previous);
+            let keep_current = self.halfplane.contains(current);
             self.previous = current;
 
-            if keep(current) {
+            if keep_current {
                 if !keep_previous {
                     self.left_yield = Some(current);
                     Some(intersection)

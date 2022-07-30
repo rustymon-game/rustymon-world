@@ -60,8 +60,8 @@ impl<T: GridTile> Grid<T> {
             let bbox = self.tile_box(Index::new(0, y));
             let mut row = Vec::new();
 
-            HalfPlane(Y, Gt, bbox.min.y).clip_polygon(&polygon, &mut temp);
-            HalfPlane(Y, Lt, bbox.max.y).clip_polygon(&temp, &mut row);
+            HalfPlane(Y, Gt, bbox.min.y).clip(&polygon, &mut temp);
+            HalfPlane(Y, Lt, bbox.max.y).clip(&temp, &mut row);
             temp.clear();
 
             for x in 0..self.size.x {
@@ -69,8 +69,8 @@ impl<T: GridTile> Grid<T> {
                 let bbox = self.tile_box(index);
                 let mut polygon = Vec::new();
 
-                HalfPlane(X, Gt, bbox.min.x).clip_polygon(&row, &mut temp);
-                HalfPlane(X, Lt, bbox.max.x).clip_polygon(&temp, &mut polygon);
+                HalfPlane(X, Gt, bbox.min.x).clip(&row, &mut temp);
+                HalfPlane(X, Lt, bbox.max.x).clip(&temp, &mut polygon);
                 temp.clear();
 
                 self.polygon_add(index, polygon);
