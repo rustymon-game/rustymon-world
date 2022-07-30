@@ -1,4 +1,5 @@
-use super::{bbox::BBox, Line, Point};
+use super::primitives::{Line, X, Y};
+use super::{bbox::BBox, Point};
 use nalgebra::Vector2;
 use smallvec::SmallVec;
 
@@ -77,37 +78,25 @@ impl<T: GridTile> Grid<T> {
                 if next_i.x > current_i.x {
                     intersections.push((
                         Index::new(1, 0),
-                        Line::Vertical {
-                            x: current_box.max.x,
-                        }
-                        .intersect(current_p, next_p),
+                        Line(X, current_box.max.x).intersect(current_p, next_p),
                     ));
                 }
                 if next_i.x < current_i.x {
                     intersections.push((
                         Index::new(-1, 0),
-                        Line::Vertical {
-                            x: current_box.min.x,
-                        }
-                        .intersect(current_p, next_p),
+                        Line(X, current_box.min.x).intersect(current_p, next_p),
                     ));
                 }
                 if next_i.y > current_i.y {
                     intersections.push((
                         Index::new(0, 1),
-                        Line::Horizontal {
-                            y: current_box.max.y,
-                        }
-                        .intersect(current_p, next_p),
+                        Line(Y, current_box.max.y).intersect(current_p, next_p),
                     ));
                 }
                 if next_i.y < current_i.y {
                     intersections.push((
                         Index::new(0, -1),
-                        Line::Horizontal {
-                            y: current_box.min.y,
-                        }
-                        .intersect(current_p, next_p),
+                        Line(Y, current_box.min.y).intersect(current_p, next_p),
                     ));
                 }
 

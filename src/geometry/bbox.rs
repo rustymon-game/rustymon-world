@@ -1,3 +1,4 @@
+use super::primitives::{Gt, HalfPlane, Lt, X, Y};
 use nalgebra::Vector2;
 
 /// An axis aligned bounding box
@@ -5,26 +6,6 @@ use nalgebra::Vector2;
 pub struct BBox {
     pub min: Vector2<f64>,
     pub max: Vector2<f64>,
-}
-
-/// High-level syntax for the `intersect` argument in [`BBox::clip_polygon_on_line`]
-macro_rules! intersect_with {
-    ($x:ident = $value:expr) => {
-        |from: Vector2<f64>, to: Vector2<f64>| -> Vector2<f64> {
-            let delta = from - to;
-            let lambda = ($value - to.$x) / delta.$x;
-            delta * lambda + to
-        }
-    };
-}
-/// High-level syntax for the `is_inside` argument to [`BBox::clip_polygon_on_line`]
-macro_rules! keep {
-    ($x:ident < $value:expr) => {
-        |point: Vector2<f64>| -> bool { point.$x < $value }
-    };
-    ($x:ident > $value:expr) => {
-        |point: Vector2<f64>| -> bool { point.$x > $value }
-    };
 }
 
 impl BBox {
@@ -80,6 +61,7 @@ impl BBox {
     }
 
     /// Finds the intersection with a line segment
+    #[allow(dead_code)]
     pub fn intersect_line(
         &self,
         from: Vector2<f64>,
@@ -129,6 +111,7 @@ impl BBox {
     ///
     /// This function takes such a path and cuts it into pieces
     /// where each piece lies entirely inside the box while dumping everything outside.
+    #[allow(dead_code)]
     pub fn clip_path<T: IntoIterator<Item = Vector2<f64>>>(
         &self,
         path: T,
@@ -183,6 +166,7 @@ impl BBox {
     }
 
     /// Clip a polygon to the bounding box
+    #[inline]
     pub fn clip_polygon<T: IntoIterator<Item = Vector2<f64>>>(
         &self,
         subject: T,
@@ -190,67 +174,19 @@ impl BBox {
         let mut a = subject.into_iter().collect();
         let mut b = Vec::new();
 
-        BBox::clip_polygon_on_line(
-            &a,
-            &mut b,
-            keep!(y > self.min.y),
-            intersect_with!(y = self.min.y),
-        );
+        HalfPlane(Y, Gt, self.min.y).clip_polygon(&a, &mut b);
         a.clear();
 
-        BBox::clip_polygon_on_line(
-            &b,
-            &mut a,
-            keep!(x < self.max.x),
-            intersect_with!(x = self.max.x),
-        );
+        HalfPlane(X, Lt, self.max.x).clip_polygon(&b, &mut a);
         b.clear();
 
-        BBox::clip_polygon_on_line(
-            &a,
-            &mut b,
-            keep!(y < self.max.y),
-            intersect_with!(y = self.max.y),
-        );
+        HalfPlane(Y, Lt, self.min.y).clip_polygon(&a, &mut b);
         a.clear();
 
-        BBox::clip_polygon_on_line(
-            &b,
-            &mut a,
-            keep!(x > self.min.x),
-            intersect_with!(x = self.min.x),
-        );
+        HalfPlane(X, Gt, self.max.x).clip_polygon(&b, &mut a);
 
         a.shrink_to_fit();
         a
-    }
-
-    /// Clip a polygon on a single line.
-    ///
-    /// The line is characterized by two functions: `is_inside` and `intersect`.
-    /// - `is_inside` takes an point and returns true if the point lies on the side of the line to keep
-    /// - `intersect` takes two points and intersects their line segment with the line to clip on
-    fn clip_polygon_on_line(
-        input: &Vec<Vector2<f64>>,
-        output: &mut Vec<Vector2<f64>>,
-        is_inside: impl Fn(Vector2<f64>) -> bool,
-        intersect: impl Fn(Vector2<f64>, Vector2<f64>) -> Vector2<f64>,
-    ) {
-        for i in 0..input.len() {
-            let current = input[(i + 1) % input.len()];
-            let previous = input[i];
-
-            let intersection = intersect(previous, current);
-
-            if is_inside(current) {
-                if !is_inside(previous) {
-                    output.push(intersection);
-                }
-                output.push(current);
-            } else if is_inside(previous) {
-                output.push(intersection);
-            }
-        }
     }
 }
 
