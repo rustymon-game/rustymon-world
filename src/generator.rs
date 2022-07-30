@@ -69,7 +69,7 @@ impl<T: Constructable> TileGenerator<T> {
     pub fn new(bbox: BBox) -> TileGenerator<T> {
         TileGenerator {
             bbox,
-            constructing: T::new(),
+            constructing: T::new(bbox),
         }
     }
 }

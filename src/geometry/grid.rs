@@ -15,7 +15,7 @@ pub trait GridTile {
     fn path_leave(&mut self, point: Point);
 }
 
-type Index = Vector2<isize>;
+pub type Index = Vector2<isize>;
 
 impl<T: GridTile> Grid<T> {
     pub fn new(bbox: BBox, step: Vector2<f64>) -> Grid<T> {

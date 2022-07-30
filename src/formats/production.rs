@@ -1,4 +1,5 @@
-use crate::Constructable;
+use super::Constructable;
+use crate::geometry::BBox;
 use nalgebra::Vector2;
 use serde::Serialize;
 
@@ -37,9 +38,9 @@ pub struct Area {
 }
 
 impl Constructable for Tile {
-    fn new() -> Self {
+    fn new(bbox: BBox) -> Self {
         Tile {
-            bbox: [f64::NAN; 4],
+            bbox: [bbox.min.x, bbox.min.y, bbox.max.x, bbox.max.y],
             streets: Vec::new(),
             poi: Vec::new(),
             areas: Vec::new(),
