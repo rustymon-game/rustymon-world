@@ -10,20 +10,14 @@ pub type WorldGenerator<T> = Grid<Construction<T>>;
 
 impl<T: Constructable> Handler for WorldGenerator<T> {
     fn area(&mut self, area: &Area) {
-        for tile in self.tiles.iter_mut() {
-            for ring in area.outer_rings() {
-                let polygon = ring
-                    .iter()
-                    .map(NodeRef::get_location)
-                    .flatten()
-                    .map(|l| Point::new(l.lon(), l.lat()));
+        for ring in area.outer_rings() {
+            let polygon = ring
+                .iter()
+                .map(NodeRef::get_location)
+                .flatten()
+                .map(|l| Point::new(l.lon(), l.lat()));
 
-                let polygon = tile.bbox.clip_polygon(polygon);
-
-                if polygon.len() > 0 {
-                    tile.constructing.add_area(polygon);
-                }
-            }
+            self.clip_polygon(polygon);
         }
     }
 
@@ -84,5 +78,10 @@ impl<T: Constructable> GridTile for Construction<T> {
         self.wip_way.push(point);
         self.constructing.add_way(self.wip_way.clone());
         self.wip_way.clear();
+    }
+    fn polygon_add(&mut self, polygon: Vec<Point>) {
+        if polygon.len() > 0 {
+            self.constructing.add_area(polygon);
+        }
     }
 }

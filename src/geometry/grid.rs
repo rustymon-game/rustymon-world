@@ -1,4 +1,4 @@
-use super::primitives::{Line, X, Y};
+use super::primitives::{Gt, HalfPlane, Line, Lt, X, Y};
 use super::{bbox::BBox, Point};
 use nalgebra::Vector2;
 use smallvec::SmallVec;
@@ -15,6 +15,7 @@ pub trait GridTile {
     fn path_enter(&mut self, point: Point);
     fn path_step(&mut self, point: Point);
     fn path_leave(&mut self, point: Point);
+    fn polygon_add(&mut self, polygon: Vec<Point>);
 }
 
 pub type Index = Vector2<isize>;
@@ -51,7 +52,33 @@ impl<T: GridTile> Grid<T> {
         }
     }
 
-    pub fn clip_path<I: IntoIterator<Item = Vector2<f64>>>(&mut self, path: I) {
+    pub fn clip_polygon<I: IntoIterator<Item = Point>>(&mut self, polygon: I) {
+        let polygon: Vec<Point> = polygon.into_iter().collect();
+        let mut temp = Vec::new();
+
+        for y in 0..self.size.y {
+            let bbox = self.tile_box(Index::new(0, y));
+            let mut row = Vec::new();
+
+            HalfPlane(Y, Gt, bbox.min.y).clip_polygon(&polygon, &mut temp);
+            HalfPlane(Y, Lt, bbox.max.y).clip_polygon(&temp, &mut row);
+            temp.clear();
+
+            for x in 0..self.size.x {
+                let index = Index::new(x, y);
+                let bbox = self.tile_box(index);
+                let mut polygon = Vec::new();
+
+                HalfPlane(X, Gt, bbox.min.x).clip_polygon(&row, &mut temp);
+                HalfPlane(X, Lt, bbox.max.x).clip_polygon(&temp, &mut polygon);
+                temp.clear();
+
+                self.polygon_add(index, polygon);
+            }
+        }
+    }
+
+    pub fn clip_path<I: IntoIterator<Item = Point>>(&mut self, path: I) {
         /*
         let mut path: impl Iterator<Item = Vector2<f64>> = path.into_iter();
         */
@@ -153,6 +180,12 @@ impl<T: GridTile> Grid<T> {
     fn path_leave(&mut self, index: Index, point: Point) {
         if let Some(index) = self.safe_vector_index(index) {
             self.tiles[index].path_leave(point);
+        }
+    }
+
+    fn polygon_add(&mut self, index: Index, polygon: Vec<Point>) {
+        if let Some(index) = self.safe_vector_index(index) {
+            self.tiles[index].polygon_add(polygon);
         }
     }
 
