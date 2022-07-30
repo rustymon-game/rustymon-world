@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use super::bbox::BBox;
 use nalgebra::Vector2;
 
