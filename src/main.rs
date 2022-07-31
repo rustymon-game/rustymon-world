@@ -1,7 +1,7 @@
 use crate::generator::WorldGenerator;
 use clap::Parser;
+use libosmium::handler::{apply_with_areas, AreaAssemblerConfig, Handler};
 use nalgebra::Vector2;
-use osmium::handler::{apply_with_areas, AreaAssemblerConfig, Handler};
 use std::ffi::CString;
 
 mod formats;

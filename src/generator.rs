@@ -2,13 +2,13 @@ use crate::formats::Constructable;
 use crate::geometry::bbox::GenericBox;
 use crate::geometry::grid::{Grid, GridTile};
 use crate::geometry::{BBox, Point};
+use libosmium::area::Area;
+use libosmium::handler::Handler;
+use libosmium::location::PRECISION;
+use libosmium::node::{Node, NodeRef};
+use libosmium::node_ref_list::NodeRefList;
+use libosmium::way::Way;
 use nalgebra::Vector2;
-use osmium::area::Area;
-use osmium::handler::Handler;
-use osmium::location::PRECISION;
-use osmium::node::{Node, NodeRef};
-use osmium::node_ref_list::NodeRefList;
-use osmium::way::Way;
 use std::ops::{Deref, DerefMut};
 
 pub struct WorldGenerator<T: Constructable> {
