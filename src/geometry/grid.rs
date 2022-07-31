@@ -1,5 +1,6 @@
 use super::primitives::{Gt, HalfPlane, Line, Lt, X, Y};
 use super::{bbox::BBox, Point};
+use crate::geometry::bbox::GenericBox;
 use nalgebra::Vector2;
 use smallvec::SmallVec;
 
@@ -20,6 +21,7 @@ pub trait GridTile {
 }
 
 pub type Index = Vector2<isize>;
+pub type IndexBox = GenericBox<isize>;
 
 impl<T: GridTile> Grid<T> {
     pub fn new(center: Vector2<f64>, step_num: (usize, usize), step_size: Vector2<f64>) -> Grid<T> {
@@ -55,26 +57,61 @@ impl<T: GridTile> Grid<T> {
 
     pub fn clip_polygon<I: IntoIterator<Item = Point>>(&mut self, polygon: I) {
         let polygon: Vec<Point> = polygon.into_iter().collect();
+
+        let mut index_box =
+            IndexBox::from_iter(polygon.iter().map(|&point| self.lookup_point(point)));
+
+        // Polygon is already contained in a single tile
+        if index_box.min == index_box.max {
+            self.polygon_add(index_box.min, polygon);
+            return;
+        }
+
+        // Polygon is actually outside of this grid
+        if !index_box.intersects_box(IndexBox {
+            min: Index::new(0, 0),
+            max: self.size,
+        }) {
+            return;
+        }
+
+        // Clip the polygon's bounding box to the grid's so it can be used in the upcoming for loop
+        if index_box.min.x < 0 {
+            index_box.min.x = 0;
+        }
+        if index_box.min.y < 0 {
+            index_box.min.y = 0;
+        }
+        if index_box.max.x > self.size.x {
+            index_box.max.x = self.size.x;
+        }
+        if index_box.max.y > self.size.y {
+            index_box.max.y = self.size.x;
+        }
+
+        // Three reusable vectors for the clipping process
         let mut temp = Vec::new();
+        let mut row = Vec::new();
+        let mut tile = Vec::new();
 
-        for y in 0..self.size.y {
+        for y in index_box.min.y..index_box.max.y {
             let bbox = self.tile_box(Index::new(0, y));
-            let mut row = Vec::new();
 
-            HalfPlane(Y, Gt, bbox.min.y).clip(&polygon, &mut temp);
-            HalfPlane(Y, Lt, bbox.max.y).clip(&temp, &mut row);
             temp.clear();
+            HalfPlane(Y, Gt, bbox.min.y).clip(&polygon, &mut temp);
+            row.clear();
+            HalfPlane(Y, Lt, bbox.max.y).clip(&temp, &mut row);
 
-            for x in 0..self.size.x {
+            for x in index_box.min.x..index_box.max.x {
                 let index = Index::new(x, y);
                 let bbox = self.tile_box(index);
-                let mut polygon = Vec::new();
 
-                HalfPlane(X, Gt, bbox.min.x).clip(&row, &mut temp);
-                HalfPlane(X, Lt, bbox.max.x).clip(&temp, &mut polygon);
                 temp.clear();
+                HalfPlane(X, Gt, bbox.min.x).clip(&row, &mut temp);
+                tile.clear();
+                HalfPlane(X, Lt, bbox.max.x).clip(&temp, &mut tile);
 
-                self.polygon_add(index, polygon);
+                self.polygon_add(index, Vec::from(tile.as_slice()));
             }
         }
     }

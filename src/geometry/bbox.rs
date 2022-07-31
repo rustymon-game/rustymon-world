@@ -80,6 +80,15 @@ impl Default for GenericBox<i32> {
     }
 }
 
+impl Default for GenericBox<isize> {
+    fn default() -> Self {
+        GenericBox {
+            min: Vector2::new(isize::MAX, isize::MAX),
+            max: Vector2::new(isize::MIN, isize::MIN),
+        }
+    }
+}
+
 impl Default for BBox {
     fn default() -> Self {
         BBox::new()
