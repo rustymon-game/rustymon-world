@@ -16,6 +16,7 @@ pub trait GridTile {
     fn path_step(&mut self, point: Point);
     fn path_leave(&mut self, point: Point);
     fn polygon_add(&mut self, polygon: Vec<Point>);
+    fn point_add(&mut self, point: Point);
 }
 
 pub type Index = Vector2<isize>;
@@ -157,6 +158,11 @@ impl<T: GridTile> Grid<T> {
         self.path_leave(current_i, current_p);
     }
 
+    pub fn clip_point(&mut self, point: Point) {
+        let index = self.lookup_point(point);
+        self.point_add(index, point);
+    }
+
     fn safe_vector_index(&self, index: Index) -> Option<usize> {
         if 0 <= index.x && index.x < self.size.x && 0 <= index.y && index.y < self.size.y {
             Some((index.x + self.size.x * index.y) as usize)
@@ -186,6 +192,12 @@ impl<T: GridTile> Grid<T> {
     fn polygon_add(&mut self, index: Index, polygon: Vec<Point>) {
         if let Some(index) = self.safe_vector_index(index) {
             self.tiles[index].polygon_add(polygon);
+        }
+    }
+
+    fn point_add(&mut self, index: Index, point: Point) {
+        if let Some(index) = self.safe_vector_index(index) {
+            self.tiles[index].point_add(point);
         }
     }
 

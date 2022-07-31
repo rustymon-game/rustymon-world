@@ -23,15 +23,15 @@ struct Args {
     #[clap(value_parser)]
     center_x: f64,
 
-    /// Number of columns
+    /// Number of columns [default: 1]
     #[clap(short, long, value_parser)]
     cols: Option<usize>,
 
-    /// Number of rows
+    /// Number of rows [default: 1]
     #[clap(short, long, value_parser)]
     rows: Option<usize>,
 
-    /// Tile's width in degrees
+    /// Tile's width in degrees [default: 0.01]
     #[clap(short, long, value_parser)]
     degree: Option<f64>,
 }
@@ -60,10 +60,5 @@ fn main() {
         );
     }
 
-    let tiles: Vec<formats::Pytest> = handler
-        .tiles
-        .into_iter()
-        .map(|tile| tile.constructing)
-        .collect();
-    serde_json::to_writer(std::io::stdout(), &tiles).expect("Couldn't output");
+    serde_json::to_writer(std::io::stdout(), &handler.into_tiles()).expect("Couldn't output");
 }
