@@ -6,33 +6,24 @@
 //! [`Grid`]: super::grid::Grid
 use super::primitives::{Gt, HalfPlane, Lt, X, Y};
 use super::Point;
+use nalgebra::{Scalar, Vector2};
 
 /// An axis aligned bounding box
 #[derive(Copy, Clone, Debug)]
-pub struct BBox {
-    pub min: Point,
-    pub max: Point,
+pub struct GenericBox<T: Scalar> {
+    pub min: Vector2<T>,
+    pub max: Vector2<T>,
 }
 
-impl BBox {
-    /// Create an "empty" bounding box which contains no point
-    ///
-    /// After creating use [`fit`] at least twice to get an actual bounding box.
-    ///
-    /// [`fit`]: BBox::fit
-    #[inline]
-    pub fn new() -> BBox {
-        BBox {
-            min: Point::new(f64::INFINITY, f64::INFINITY),
-            max: Point::new(f64::NEG_INFINITY, f64::NEG_INFINITY),
-        }
-    }
+/// The most commonly used bounding box
+pub type BBox = GenericBox<f64>;
 
+impl<T: PartialOrd + Scalar + Copy> GenericBox<T> {
     /// Check if a point is contained inside the bounding box
     ///
     /// If the point lies exactly on the edge it is said to be contained.
     #[inline]
-    pub fn contains(&self, point: Point) -> bool {
+    pub fn contains(&self, point: Vector2<T>) -> bool {
         self.min.x <= point.x
             && self.min.y <= point.y
             && point.x <= self.max.x
@@ -41,7 +32,7 @@ impl BBox {
 
     /// Adjust the bounding box's size to fit a given point
     #[inline]
-    pub fn fit(&mut self, point: Point) {
+    pub fn fit(&mut self, point: Vector2<T>) {
         use std::cmp::Ordering::{Greater, Less};
         if matches!(self.min.x.partial_cmp(&point.x), Some(Greater)) {
             self.min.x = point.x;
@@ -59,11 +50,54 @@ impl BBox {
 
     /// Check if two bounding boxes intersect
     #[allow(dead_code)]
-    pub fn intersects_box(&self, other: BBox) -> bool {
+    pub fn intersects_box(&self, other: GenericBox<T>) -> bool {
         self.contains(other.min)
             || self.contains(other.max)
-            || self.contains(Point::new(other.min.x, other.max.y))
-            || self.contains(Point::new(other.max.x, other.min.y))
+            || self.contains(Vector2::new(other.min.x, other.max.y))
+            || self.contains(Vector2::new(other.max.x, other.min.y))
+    }
+}
+
+impl<T: PartialOrd + Scalar + Copy> FromIterator<Vector2<T>> for GenericBox<T>
+where
+    GenericBox<T>: Default,
+{
+    fn from_iter<I: IntoIterator<Item = Vector2<T>>>(iter: I) -> Self {
+        let mut bbox: GenericBox<T> = Default::default();
+        for v in iter {
+            bbox.fit(v);
+        }
+        bbox
+    }
+}
+
+impl Default for GenericBox<i32> {
+    fn default() -> Self {
+        GenericBox {
+            min: Vector2::new(i32::MAX, i32::MAX),
+            max: Vector2::new(i32::MIN, i32::MIN),
+        }
+    }
+}
+
+impl Default for BBox {
+    fn default() -> Self {
+        BBox::new()
+    }
+}
+
+impl BBox {
+    /// Create an "empty" bounding box which contains no point
+    ///
+    /// After creating use [`fit`] at least twice to get an actual bounding box.
+    ///
+    /// [`fit`]: BBox::fit
+    #[inline]
+    pub fn new() -> BBox {
+        BBox {
+            min: Point::new(f64::INFINITY, f64::INFINITY),
+            max: Point::new(f64::NEG_INFINITY, f64::NEG_INFINITY),
+        }
     }
 
     /// Finds the intersection with a line segment
@@ -183,16 +217,6 @@ impl BBox {
 
         a.shrink_to_fit();
         a
-    }
-}
-
-impl FromIterator<Point> for BBox {
-    fn from_iter<T: IntoIterator<Item = Point>>(iter: T) -> Self {
-        let mut bbox = BBox::new();
-        for v in iter {
-            bbox.fit(v);
-        }
-        bbox
     }
 }
 
