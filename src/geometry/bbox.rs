@@ -199,7 +199,7 @@ impl BBox {
     }
 
     /// Clip a polygon to the bounding box
-    #[inline]
+    #[allow(dead_code)]
     pub fn clip_polygon<T: IntoIterator<Item = Point>>(&self, subject: T) -> Vec<Point> {
         let mut a = subject.into_iter().collect();
         let mut b = Vec::new();

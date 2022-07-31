@@ -29,8 +29,8 @@ impl<T: GridTile> Grid<T> {
         );
 
         let mut boxes = Vec::with_capacity(step_num.0 * step_num.1);
-        for x in 0..step_num.0 {
-            for y in 0..step_num.1 {
+        for y in 0..step_num.1 {
+            for x in 0..step_num.0 {
                 let min = Vector2::new(
                     min.x + x as f64 * step_size.x,
                     min.y + y as f64 * step_size.y,
