@@ -52,11 +52,6 @@ impl<T: Constructable> WorldGenerator<T> {
 impl<T: Constructable> Handler for WorldGenerator<T> {
     fn area(&mut self, area: &Area) {
         for ring in area.outer_rings() {
-            // Skip rings which don't touch the grid
-            if !quick_check_points(self.int_box, ring) {
-                continue;
-            }
-
             let polygon = ring
                 .iter()
                 .map(NodeRef::get_location)
@@ -87,11 +82,6 @@ impl<T: Constructable> Handler for WorldGenerator<T> {
             _ => return,
         }
 
-        // Skip ways which don't touch the grid
-        if !quick_check_points(self.int_box, nodes) {
-            return;
-        }
-
         let path = way
             .nodes()
             .iter()
@@ -101,20 +91,6 @@ impl<T: Constructable> Handler for WorldGenerator<T> {
 
         self.clip_path(path);
     }
-}
-
-/// Check if at least any point lies in the bounding box
-fn quick_check_points(bbox: GenericBox<i32>, points: &NodeRefList) -> bool {
-    for point in points.iter() {
-        // Since this is only a quick check if at least any point lies in the grid,
-        // it doesn't matter if the point isn't actually initialized.
-        // Any uninitialized point won't lie in the grid because osmium sets it to i32::MAX.
-        let location = unsafe { point.location.assume_init() };
-        if bbox.contains(Vector2::new(location.raw_x, location.raw_y)) {
-            return true;
-        }
-    }
-    return false;
 }
 
 pub struct Construction<T> {

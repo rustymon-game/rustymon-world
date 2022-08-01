@@ -67,15 +67,19 @@ impl<T: GridTile> Grid<T> {
             return;
         }
 
+        // Fix the the polygon's box to actually contain it
+        index_box.max += Index::new(1, 1);
+
         // Polygon is actually outside of this grid
-        if !index_box.intersects_box(IndexBox {
-            min: Index::new(0, 0),
-            max: self.size,
-        }) {
+        if index_box.min.x >= self.size.x
+            || index_box.min.y >= self.size.y
+            || index_box.max.x < 0
+            || index_box.max.y < 0
+        {
             return;
         }
 
-        // Clip the polygon's bounding box to the grid's so it can be used in the upcoming for loop
+        // Clip the polygon's bounding box such that it can be used as range to iterate over
         if index_box.min.x < 0 {
             index_box.min.x = 0;
         }
