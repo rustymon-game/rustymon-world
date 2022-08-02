@@ -24,17 +24,17 @@ struct Args {
     #[clap(value_parser)]
     center_x: f64,
 
-    /// Number of columns [default: 1]
-    #[clap(short, long, value_parser)]
-    cols: Option<usize>,
+    /// Number of columns
+    #[clap(short, long, value_parser, default_value_t = 1)]
+    cols: usize,
 
-    /// Number of rows [default: 1]
-    #[clap(short, long, value_parser)]
-    rows: Option<usize>,
+    /// Number of rows
+    #[clap(short, long, value_parser, default_value_t = 1)]
+    rows: usize,
 
-    /// Tile's width in degrees [default: 0.01]
-    #[clap(short, long, value_parser)]
-    degree: Option<f64>,
+    /// Tile's width in degrees
+    #[clap(short, long, value_parser, default_value_t = 0.01)]
+    degree: f64,
 }
 
 fn main() {
@@ -42,9 +42,8 @@ fn main() {
 
     let file = CString::new(args.file).expect("File path contained NUL character");
 
-    let step_num = (args.cols.unwrap_or(1), args.rows.unwrap_or(1));
-    let step_size = args.degree.unwrap_or(0.01);
-    let step_size = Vector2::new(step_size, step_size);
+    let step_num = (args.cols, args.rows);
+    let step_size = Vector2::new(args.degree, args.degree);
     let center = Vector2::new(args.center_x, args.center_y);
 
     let mut handler: WorldGenerator<formats::Pytest> =
