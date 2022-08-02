@@ -6,9 +6,7 @@ use libosmium::area::Area;
 use libosmium::handler::Handler;
 use libosmium::location::PRECISION;
 use libosmium::node::{Node, NodeRef};
-use libosmium::node_ref_list::NodeRefList;
 use libosmium::way::Way;
-use nalgebra::Vector2;
 use std::ops::{Deref, DerefMut};
 
 pub struct WorldGenerator<T: Constructable> {
