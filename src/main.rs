@@ -7,7 +7,6 @@ use std::ffi::CString;
 mod formats;
 mod generator;
 mod geometry;
-mod threading;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
