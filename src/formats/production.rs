@@ -1,9 +1,9 @@
 use super::Constructable;
 use crate::geometry::BBox;
 use nalgebra::Vector2;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Tile {
     #[serde(rename = "box")]
     pub bbox: [f64; 4],
@@ -12,7 +12,7 @@ pub struct Tile {
     pub areas: Vec<Area>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Node {
     pub spawns: Vec<usize>,
     #[serde(rename = "type")]
@@ -21,7 +21,7 @@ pub struct Node {
     pub oid: usize,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Way {
     #[serde(rename = "type")]
     pub ty: usize,
@@ -29,7 +29,7 @@ pub struct Way {
     pub oid: usize,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Area {
     pub spawns: Vec<usize>,
     #[serde(rename = "type")]
@@ -38,7 +38,7 @@ pub struct Area {
     pub oid: usize,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Point {
     pub x: f64,
     pub y: f64,
