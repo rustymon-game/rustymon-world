@@ -5,26 +5,27 @@ use serde::Serialize;
 
 #[derive(Serialize, Debug)]
 pub struct Tile {
+    #[serde(rename = "box")]
     pub bbox: [f64; 4],
-    pub streets: Vec<Street>,
-    pub poi: Vec<PointOfInterest>,
+    pub ways: Vec<Way>,
+    pub nodes: Vec<Node>,
     pub areas: Vec<Area>,
 }
 
 #[derive(Serialize, Debug)]
-pub struct PointOfInterest {
+pub struct Node {
     pub spawns: Vec<usize>,
     #[serde(rename = "type")]
     pub ty: usize,
-    pub point: [f64; 2],
+    pub point: Point,
     pub oid: usize,
 }
 
 #[derive(Serialize, Debug)]
-pub struct Street {
+pub struct Way {
     #[serde(rename = "type")]
     pub ty: usize,
-    pub points: Vec<[f64; 2]>,
+    pub points: Vec<Point>,
     pub oid: usize,
 }
 
@@ -33,16 +34,22 @@ pub struct Area {
     pub spawns: Vec<usize>,
     #[serde(rename = "type")]
     pub ty: usize,
-    pub points: Vec<[f64; 2]>,
+    pub points: Vec<Point>,
     pub oid: usize,
+}
+
+#[derive(Serialize, Debug)]
+pub struct Point {
+    pub x: f64,
+    pub y: f64,
 }
 
 impl Constructable for Tile {
     fn new(bbox: BBox) -> Self {
         Tile {
             bbox: [bbox.min.x, bbox.min.y, bbox.max.x, bbox.max.y],
-            streets: Vec::new(),
-            poi: Vec::new(),
+            ways: Vec::new(),
+            nodes: Vec::new(),
             areas: Vec::new(),
         }
     }
@@ -51,25 +58,28 @@ impl Constructable for Tile {
         self.areas.push(Area {
             spawns: Vec::new(),
             ty: 0,
-            points: area.into_iter().map(|v| [v.x, v.y]).collect(),
+            points: area.into_iter().map(|v| Point { x: v.x, y: v.y }).collect(),
             oid: 0,
         });
     }
 
     fn add_node(&mut self, node: Vector2<f64>) {
-        self.poi.push(PointOfInterest {
+        self.nodes.push(Node {
             spawns: Vec::new(),
             ty: 0,
-            point: [node.x, node.y],
+            point: Point {
+                x: node.x,
+                y: node.y,
+            },
             oid: 0,
         });
     }
 
     fn extend_ways(&mut self, ways: impl IntoIterator<Item = Vec<Vector2<f64>>>) {
         for way in ways {
-            self.streets.push(Street {
+            self.ways.push(Way {
                 ty: 0,
-                points: way.into_iter().map(|v| [v.x, v.y]).collect(),
+                points: way.into_iter().map(|v| Point { x: v.x, y: v.y }).collect(),
                 oid: 0,
             });
         }
