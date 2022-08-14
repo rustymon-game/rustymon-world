@@ -1,9 +1,7 @@
 use crate::generator::WorldGenerator;
 use clap::{Parser, Subcommand};
 use libosmium::handler::{AreaAssemblerConfig, Handler};
-use log::error;
 use nalgebra::Vector2;
-use std::ffi::CString;
 
 mod formats;
 mod generator;
@@ -56,7 +54,7 @@ struct Args {
     command: Commands,
 }
 
-fn main() {
+fn main() -> Result<(), String> {
     env_logger::init();
 
     let args = Args::parse();
@@ -77,36 +75,30 @@ fn main() {
             let mut handler: WorldGenerator<formats::Production> =
                 WorldGenerator::new(center, step_num, step_size);
 
-            let _ = handler.apply_with_areas(
-                &file,
-                AreaAssemblerConfig {
-                    create_empty_areas: false,
-                    ..Default::default()
-                },
-            );
+            handler
+                .apply_with_areas(
+                    &file,
+                    AreaAssemblerConfig {
+                        create_empty_areas: false,
+                        ..Default::default()
+                    },
+                )
+                .map_err(|error| error.into_string().unwrap())?;
 
             let tiles = handler.into_tiles();
             if let Some(url) = url {
                 publish::publish(&url, tiles);
             } else {
-                serde_json::to_writer(std::io::stdout(), &tiles).expect("Couldn't output");
+                serde_json::to_writer(std::io::stdout(), &tiles)
+                    .map_err(|error| error.to_string())?;
             }
         }
         Commands::Publish { file, url } => {
-            let file = match std::fs::File::open(file) {
-                Ok(file) => file,
-                Err(error) => {
-                    error!("Couldn't open json file: {}", error);
-                    return;
-                }
-            };
-            match serde_json::from_reader::<_, Vec<formats::Production>>(file) {
-                Ok(tiles) => publish::publish(&url, tiles),
-                Err(error) => {
-                    error!("Couldn't parse json file: {}", error);
-                    return;
-                }
-            }
+            let file = std::fs::File::open(file).map_err(|error| error.to_string())?;
+            let tiles = serde_json::from_reader::<_, Vec<formats::Production>>(file)
+                .map_err(|error| error.to_string())?;
+            publish::publish(&url, tiles);
         }
     }
+    Ok(())
 }
