@@ -1,6 +1,6 @@
 use crate::generator::WorldGenerator;
 use clap::{Parser, Subcommand};
-use libosmium::handler::{apply_with_areas, AreaAssemblerConfig, Handler};
+use libosmium::handler::{AreaAssemblerConfig, Handler};
 use log::error;
 use nalgebra::Vector2;
 use std::ffi::CString;
@@ -20,6 +20,7 @@ enum Commands {
         /// Url to publish to
         url: String,
     },
+    #[clap(about = "Parse a PBF file")]
     Parse {
         /// PBF file to parse
         file: String,
@@ -39,7 +40,7 @@ enum Commands {
         rows: usize,
 
         /// Tile's width in degrees
-        #[clap(short, long, value_parser, default_value_t = 0.01)]
+        #[clap(short, long, default_value_t = 0.01)]
         degree: f64,
 
         /// Publish to url instead of printing to stdout
@@ -69,8 +70,6 @@ fn main() {
             center_y,
             url,
         } => {
-            let file = CString::new(file).expect("File path contained NUL character");
-
             let step_num = (cols, rows);
             let step_size = Vector2::new(degree, degree);
             let center = Vector2::new(center_x, center_y);
@@ -78,16 +77,13 @@ fn main() {
             let mut handler: WorldGenerator<formats::Production> =
                 WorldGenerator::new(center, step_num, step_size);
 
-            unsafe {
-                apply_with_areas(
-                    handler.as_table(),
-                    file.as_ptr(),
-                    AreaAssemblerConfig {
-                        create_empty_areas: false,
-                        ..Default::default()
-                    },
-                );
-            }
+            let _ = handler.apply_with_areas(
+                &file,
+                AreaAssemblerConfig {
+                    create_empty_areas: false,
+                    ..Default::default()
+                },
+            );
 
             let tiles = handler.into_tiles();
             if let Some(url) = url {
