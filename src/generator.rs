@@ -7,23 +7,10 @@ use libosmium::handler::Handler;
 use libosmium::location::PRECISION;
 use libosmium::node::{Node, NodeRef};
 use libosmium::way::Way;
-use std::ops::{Deref, DerefMut};
 
 pub struct WorldGenerator<T: Constructable> {
     pub grid: Grid<Construction<T>>,
     pub int_box: GenericBox<i32>,
-}
-impl<T: Constructable> Deref for WorldGenerator<T> {
-    type Target = Grid<Construction<T>>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.grid
-    }
-}
-impl<T: Constructable> DerefMut for WorldGenerator<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.grid
-    }
 }
 
 impl<T: Constructable> WorldGenerator<T> {
@@ -55,7 +42,7 @@ impl<T: Constructable> Handler for WorldGenerator<T> {
                 .map(NodeRef::get_location)
                 .flatten()
                 .map(|l| Point::new(l.lon(), l.lat()));
-            self.clip_polygon(polygon);
+            self.grid.clip_polygon(polygon);
         }
     }
 
@@ -63,7 +50,7 @@ impl<T: Constructable> Handler for WorldGenerator<T> {
         let location = node.location();
         if location.is_defined() && location.is_valid() {
             let point = Point::new(location.lon(), location.lat());
-            self.clip_point(point);
+            self.grid.clip_point(point);
         }
     }
 
@@ -87,7 +74,7 @@ impl<T: Constructable> Handler for WorldGenerator<T> {
             .flatten()
             .map(|l| Point::new(l.lon(), l.lat()));
 
-        self.clip_path(path);
+        self.grid.clip_path(path);
     }
 }
 

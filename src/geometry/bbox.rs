@@ -157,6 +157,7 @@ impl BBox {
     /// This function takes such a path and cuts it into pieces
     /// where each piece lies entirely inside the box while dumping everything outside.
     #[allow(dead_code)]
+    #[deprecated = "Use Grid::clip_path instead because it scales way better."]
     pub fn clip_path<T: IntoIterator<Item = Point>>(&self, path: T) -> Vec<Vec<Point>> {
         let mut paths: Vec<Vec<Point>> = Vec::new();
 
@@ -209,6 +210,7 @@ impl BBox {
 
     /// Clip a polygon to the bounding box
     #[allow(dead_code)]
+    #[deprecated = "Use Grid::clip_polygon instead because it scales way better."]
     pub fn clip_polygon<T: IntoIterator<Item = Point>>(&self, subject: T) -> Vec<Point> {
         let mut a = subject.into_iter().collect();
         let mut b = Vec::new();

@@ -7,6 +7,7 @@ mod formats;
 mod generator;
 mod geometry;
 mod publish;
+mod timer;
 
 #[derive(Subcommand, Debug)]
 enum Commands {
@@ -75,6 +76,9 @@ fn main() -> Result<(), String> {
             let mut handler: WorldGenerator<formats::Production> =
                 WorldGenerator::new(center, step_num, step_size);
 
+            // start timer
+            let mut handler = timer::Timer::wrap(handler);
+
             handler
                 .apply_with_areas(
                     &file,
@@ -84,6 +88,10 @@ fn main() -> Result<(), String> {
                     },
                 )
                 .map_err(|error| error.into_string().unwrap())?;
+
+            // end timer
+            handler.print();
+            let mut handler = handler.unwrap();
 
             let tiles = handler.into_tiles();
             if let Some(url) = url {
