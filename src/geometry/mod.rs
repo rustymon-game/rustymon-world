@@ -1,6 +1,7 @@
 pub mod bbox;
 pub mod grid;
 pub mod iter;
+pub mod polygon;
 pub mod primitives;
 
 pub use bbox::BBox;

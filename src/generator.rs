@@ -1,16 +1,19 @@
 use crate::formats::Constructable;
 use crate::geometry::bbox::GenericBox;
 use crate::geometry::grid::{Grid, GridTile};
+use crate::geometry::polygon::combine_rings;
 use crate::geometry::{BBox, Point};
 use libosmium::area::Area;
 use libosmium::handler::Handler;
 use libosmium::location::PRECISION;
 use libosmium::node::{Node, NodeRef};
+use libosmium::node_ref_list::NodeRefList;
 use libosmium::way::Way;
 
 pub struct WorldGenerator<T: Constructable> {
     pub grid: Grid<Construction<T>>,
     pub int_box: GenericBox<i32>,
+    pub rings: Vec<Vec<Point>>,
 }
 
 impl<T: Constructable> WorldGenerator<T> {
@@ -22,6 +25,7 @@ impl<T: Constructable> WorldGenerator<T> {
                 max: (&grid.bbox.max).map(|f| (f * PRECISION as f64).ceil() as i32),
             },
             grid,
+            rings: Vec::new(),
         }
     }
 
@@ -37,11 +41,28 @@ impl<T: Constructable> WorldGenerator<T> {
 impl<T: Constructable> Handler for WorldGenerator<T> {
     fn area(&mut self, area: &Area) {
         for ring in area.outer_rings() {
-            let polygon = ring
-                .iter()
-                .map(NodeRef::get_location)
-                .flatten()
-                .map(|l| Point::new(l.lon(), l.lat()));
+            let mut polygon: Vec<Point> = nodes_to_iter(ring).collect();
+
+            // Add the inner rings to the outer ring before clipping
+            let mut num_rings = 0;
+            for inner_ring in area.inner_rings(ring) {
+                if num_rings < self.rings.len() {
+                    self.rings[num_rings].clear();
+                    self.rings[num_rings].extend(nodes_to_iter(inner_ring));
+                } else {
+                    self.rings.push(nodes_to_iter(inner_ring).collect());
+                }
+                num_rings += 1;
+            }
+            if num_rings > 0 {
+                combine_rings(&mut polygon, &mut self.rings[0..num_rings]);
+                log::info!(
+                    "Combined {} inner rings @ {}",
+                    num_rings,
+                    area.original_id()
+                );
+            }
+
             self.grid.clip_polygon(polygon);
         }
     }
@@ -67,14 +88,7 @@ impl<T: Constructable> Handler for WorldGenerator<T> {
             _ => return,
         }
 
-        let path = way
-            .nodes()
-            .iter()
-            .map(NodeRef::get_location)
-            .flatten()
-            .map(|l| Point::new(l.lon(), l.lat()));
-
-        self.grid.clip_path(path);
+        self.grid.clip_path(nodes_to_iter(way.nodes()));
     }
 }
 
@@ -111,4 +125,11 @@ impl<T: Constructable> GridTile for Construction<T> {
     fn point_add(&mut self, point: Point) {
         self.constructing.add_node(point);
     }
+}
+
+fn nodes_to_iter<'a>(ring: &'a NodeRefList) -> impl Iterator<Item = Point> + 'a {
+    ring.iter()
+        .map(NodeRef::get_location)
+        .flatten()
+        .map(|l| Point::new(l.lon(), l.lat()))
 }

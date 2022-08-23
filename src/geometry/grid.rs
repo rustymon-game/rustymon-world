@@ -55,9 +55,7 @@ impl<T: GridTile> Grid<T> {
         }
     }
 
-    pub fn clip_polygon<I: IntoIterator<Item = Point>>(&mut self, polygon: I) {
-        let polygon: Vec<Point> = polygon.into_iter().collect();
-
+    pub fn clip_polygon(&mut self, polygon: Vec<Point>) {
         let mut index_box =
             IndexBox::from_iter(polygon.iter().map(|&point| self.lookup_point(point)));
 
@@ -120,11 +118,8 @@ impl<T: GridTile> Grid<T> {
         }
     }
 
-    pub fn clip_path<I: IntoIterator<Item = Point>>(&mut self, path: I) {
-        /*
-        let mut path: impl Iterator<Item = Vector2<f64>> = path.into_iter();
-        */
-        let mut path = path.into_iter();
+    pub fn clip_path(&mut self, path: impl Iterator<Item = Point>) {
+        let mut path = path;
 
         let mut current_p = if let Some(point) = path.next() {
             point
