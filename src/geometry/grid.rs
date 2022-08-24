@@ -4,58 +4,13 @@ use crate::geometry::bbox::GenericBox;
 use nalgebra::Vector2;
 use smallvec::SmallVec;
 
-pub struct Grid<T: GridTile> {
-    pub bbox: BBox,
-    pub step: Vector2<f64>,
-    size: Vector2<isize>,
-    pub tiles: Vec<T>,
-}
-
-pub trait GridTile {
-    fn new(bbox: BBox) -> Self;
-    fn path_enter(&mut self, point: Point);
-    fn path_step(&mut self, point: Point);
-    fn path_leave(&mut self, point: Point);
-    fn polygon_add(&mut self, polygon: Vec<Point>);
-    fn point_add(&mut self, point: Point);
-}
-
 pub type Index = Vector2<isize>;
 pub type IndexBox = GenericBox<isize>;
 
-impl<T: GridTile> Grid<T> {
-    pub fn new(center: Vector2<f64>, step_num: (usize, usize), step_size: Vector2<f64>) -> Grid<T> {
-        let min = Vector2::new(
-            center.x - step_num.0 as f64 * step_size.x / 2.0,
-            center.y - step_num.1 as f64 * step_size.y / 2.0,
-        );
+pub trait Grid {
+    fn clip_polygon(&mut self, polygon: Vec<Point>) {
+        let size = self.index_range();
 
-        let mut boxes = Vec::with_capacity(step_num.0 * step_num.1);
-        for y in 0..step_num.1 {
-            for x in 0..step_num.0 {
-                let min = Vector2::new(
-                    min.x + x as f64 * step_size.x,
-                    min.y + y as f64 * step_size.y,
-                );
-                boxes.push(BBox {
-                    min,
-                    max: min + step_size,
-                });
-            }
-        }
-
-        Grid {
-            bbox: BBox {
-                min,
-                max: boxes.last().unwrap().max,
-            },
-            step: step_size,
-            size: Index::new(step_num.0 as isize, step_num.1 as isize),
-            tiles: boxes.into_iter().map(T::new).collect(),
-        }
-    }
-
-    pub fn clip_polygon(&mut self, polygon: Vec<Point>) {
         let mut index_box =
             IndexBox::from_iter(polygon.iter().map(|&point| self.lookup_point(point)));
 
@@ -69,8 +24,8 @@ impl<T: GridTile> Grid<T> {
         index_box.max += Index::new(1, 1);
 
         // Polygon is actually outside of this grid
-        if index_box.min.x >= self.size.x
-            || index_box.min.y >= self.size.y
+        if index_box.min.x >= size.x
+            || index_box.min.y >= size.y
             || index_box.max.x < 0
             || index_box.max.y < 0
         {
@@ -84,11 +39,11 @@ impl<T: GridTile> Grid<T> {
         if index_box.min.y < 0 {
             index_box.min.y = 0;
         }
-        if index_box.max.x > self.size.x {
-            index_box.max.x = self.size.x;
+        if index_box.max.x > size.x {
+            index_box.max.x = size.x;
         }
-        if index_box.max.y > self.size.y {
-            index_box.max.y = self.size.x;
+        if index_box.max.y > size.y {
+            index_box.max.y = size.x;
         }
 
         // Three reusable vectors for the clipping process
@@ -118,7 +73,7 @@ impl<T: GridTile> Grid<T> {
         }
     }
 
-    pub fn clip_path(&mut self, path: impl Iterator<Item = Point>) {
+    fn clip_path(&mut self, path: impl Iterator<Item = Point>) {
         let mut path = path;
 
         let mut current_p = if let Some(point) = path.next() {
@@ -128,9 +83,7 @@ impl<T: GridTile> Grid<T> {
         };
         let mut current_i = self.lookup_point(current_p);
 
-        if self.bbox.contains(current_p) {
-            self.path_enter(current_i, current_p);
-        }
+        self.path_enter(current_i, current_p);
 
         for next_p in path {
             let next_i = self.lookup_point(next_p);
@@ -194,60 +147,25 @@ impl<T: GridTile> Grid<T> {
         self.path_leave(current_i, current_p);
     }
 
-    pub fn clip_point(&mut self, point: Point) {
+    fn clip_point(&mut self, point: Point) {
         let index = self.lookup_point(point);
         self.point_add(index, point);
     }
 
-    fn safe_vector_index(&self, index: Index) -> Option<usize> {
-        if 0 <= index.x && index.x < self.size.x && 0 <= index.y && index.y < self.size.y {
-            Some((index.x + self.size.x * index.y) as usize)
-        } else {
-            None
-        }
-    }
+    fn path_enter(&mut self, index: Index, point: Point);
+    fn path_step(&mut self, index: Index, point: Point);
+    fn path_leave(&mut self, index: Index, point: Point);
 
-    fn path_enter(&mut self, index: Index, point: Point) {
-        if let Some(index) = self.safe_vector_index(index) {
-            self.tiles[index].path_enter(point);
-        }
-    }
+    fn polygon_add(&mut self, index: Index, polygon: Vec<Point>);
 
-    fn path_step(&mut self, index: Index, point: Point) {
-        if let Some(index) = self.safe_vector_index(index) {
-            self.tiles[index].path_step(point);
-        }
-    }
+    fn point_add(&mut self, index: Index, point: Point);
 
-    fn path_leave(&mut self, index: Index, point: Point) {
-        if let Some(index) = self.safe_vector_index(index) {
-            self.tiles[index].path_leave(point);
-        }
-    }
-
-    fn polygon_add(&mut self, index: Index, polygon: Vec<Point>) {
-        if let Some(index) = self.safe_vector_index(index) {
-            self.tiles[index].polygon_add(polygon);
-        }
-    }
-
-    fn point_add(&mut self, index: Index, point: Point) {
-        if let Some(index) = self.safe_vector_index(index) {
-            self.tiles[index].point_add(point);
-        }
-    }
-
-    pub fn tile_box(&self, index: Vector2<isize>) -> BBox {
-        let min = self.bbox.min + self.step.component_mul(&index.map(|i| i as f64));
-        BBox {
-            min,
-            max: min + self.step,
-        }
-    }
-
-    pub fn lookup_point(&self, point: Vector2<f64>) -> Vector2<isize> {
-        (point - self.bbox.min)
-            .component_div(&self.step)
-            .map(|f| f.floor() as isize)
-    }
+    /// Get the excluded upper bound for indexes
+    ///
+    /// Used in [`clip_polygon`] to minimize computation
+    fn index_range(&self) -> Index;
+    /// Grid index to BBox i.e. points
+    fn tile_box(&self, index: Vector2<isize>) -> BBox;
+    /// Point to grid index
+    fn lookup_point(&self, point: Vector2<f64>) -> Vector2<isize>;
 }
