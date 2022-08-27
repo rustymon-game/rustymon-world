@@ -1,5 +1,5 @@
-use crate::formats::Constructable;
-use crate::geometry::BBox;
+use crate::formats::{AreaVisualType, Constructable, NodeVisualType, WayVisualType};
+use crate::geometry::{BBox, Point};
 use nalgebra::Vector2;
 use serde::Serialize;
 
@@ -26,19 +26,17 @@ impl Constructable for Tile {
         }
     }
 
-    fn add_area(&mut self, area: Vec<Vector2<f64>>) {
+    fn add_area(&mut self, area: Vec<Vector2<f64>>, _visual_type: AreaVisualType) {
         self.areas
             .push(area.into_iter().map(|v| (v.x, v.y)).collect());
     }
 
-    fn add_node(&mut self, node: Vector2<f64>) {
+    fn add_node(&mut self, node: Vector2<f64>, _visual_type: NodeVisualType) {
         self.nodes.push((node.x, node.y));
     }
 
-    fn extend_ways(&mut self, ways: impl IntoIterator<Item = Vec<Vector2<f64>>>) {
-        for way in ways {
-            self.ways
-                .push(way.into_iter().map(|v| (v.x, v.y)).collect());
-        }
+    fn add_way(&mut self, way: Vec<Point>, _visual_type: WayVisualType) {
+        self.ways
+            .push(way.into_iter().map(|v| (v.x, v.y)).collect());
     }
 }

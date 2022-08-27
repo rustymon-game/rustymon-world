@@ -1,4 +1,4 @@
-use crate::formats::Constructable;
+use crate::formats::{AreaVisualType, Constructable, NodeVisualType, WayVisualType};
 use crate::geometry::bbox::GenericBox;
 use crate::geometry::grid::{Grid, Index};
 use crate::geometry::polygon::combine_rings;
@@ -20,6 +20,11 @@ pub struct WorldGenerator<T: Constructable> {
     pub step: Vector2<f64>,
     pub size: Vector2<isize>,
     pub tiles: Vec<Construction<T>>,
+
+    // Current visual types
+    pub area_type: AreaVisualType,
+    pub node_type: NodeVisualType,
+    pub way_type: WayVisualType,
 }
 
 impl<T: Constructable> WorldGenerator<T> {
@@ -65,6 +70,10 @@ impl<T: Constructable> WorldGenerator<T> {
             step: step_size,
             size: Vector2::new(step_num.0 as isize, step_num.1 as isize),
             tiles,
+
+            area_type: AreaVisualType::None,
+            node_type: NodeVisualType::None,
+            way_type: WayVisualType::None,
         }
     }
 
@@ -115,6 +124,22 @@ impl<T: Constructable> Handler for WorldGenerator<T> {
                 );
             }
 
+            self.area_type = AreaVisualType::None;
+            for (key, value) in area.tags().into_iter() {
+                if key == "building" {
+                    self.area_type = AreaVisualType::Building;
+                } else if key == "water" {
+                    self.area_type = AreaVisualType::Water;
+                } else if key == "landuse" && value == "forest" {
+                    self.area_type = AreaVisualType::Forest;
+                } else if key == "landuse" && (value == "meadow" || value == "farmland" || value == "grass") {
+                    self.area_type = AreaVisualType::Field;
+                } else {
+                    continue;
+                }
+                break;
+            }
+
             self.clip_polygon(polygon);
         }
     }
@@ -159,24 +184,27 @@ impl<T: Constructable> Grid for WorldGenerator<T> {
     }
 
     fn path_leave(&mut self, index: Index, point: Point) {
+        let way_type = self.way_type;
         if let Some(tile) = self.get_tile(index) {
             tile.wip_way.push(point);
-            tile.constructing.add_way(tile.wip_way.clone());
+            tile.constructing.add_way(tile.wip_way.clone(), way_type);
             tile.wip_way.clear();
         }
     }
 
     fn polygon_add(&mut self, index: Index, polygon: Vec<Point>) {
+        let area_type = self.area_type;
         if let Some(tile) = self.get_tile(index) {
             if polygon.len() > 0 {
-                tile.constructing.add_area(polygon);
+                tile.constructing.add_area(polygon, area_type);
             }
         }
     }
 
     fn point_add(&mut self, index: Index, point: Point) {
+        let node_type = self.node_type;
         if let Some(tile) = self.get_tile(index) {
-            tile.constructing.add_node(point);
+            tile.constructing.add_node(point, node_type);
         }
     }
 

@@ -5,15 +5,16 @@
 //!
 //! Each format implements the [`Constructable`] trait which allows it to be constructed using a generic interface.
 use crate::geometry::{BBox, Point};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 
 mod production;
 mod pytest;
 
-/// A simplified version of production. It is used by a python script and rendered using matplotlib to inspect geometry errors.
+/// The version rustymon's backend will store and serve to the clients.
 #[allow(dead_code)]
 pub type Production = production::Tile;
 
-/// The version rustymon's backend will store and serve to the clients.
+/// A simplified version of production. It is used by a python script and rendered using matplotlib to inspect geometry errors.
 #[allow(dead_code)]
 pub type Pytest = pytest::Tile;
 
@@ -22,10 +23,29 @@ pub type Pytest = pytest::Tile;
 /// Highly WIP
 pub trait Constructable {
     fn new(bbox: BBox) -> Self;
-    fn add_area(&mut self, area: Vec<Point>);
-    fn add_node(&mut self, node: Point);
-    fn add_way(&mut self, way: Vec<Point>) {
-        self.extend_ways([way]);
-    }
-    fn extend_ways(&mut self, ways: impl IntoIterator<Item = Vec<Point>>);
+    fn add_area(&mut self, area: Vec<Point>, visual_type: AreaVisualType);
+    fn add_node(&mut self, node: Point, visual_type: NodeVisualType);
+    fn add_way(&mut self, way: Vec<Point>, visual_type: WayVisualType);
+}
+
+#[repr(u64)]
+#[derive(Copy, Clone, Debug, Serialize_repr, Deserialize_repr)]
+pub enum AreaVisualType {
+    None,
+    Building,
+    Water,
+    Forest,
+    Field,
+}
+
+#[repr(u64)]
+#[derive(Copy, Clone, Debug, Serialize_repr, Deserialize_repr)]
+pub enum NodeVisualType {
+    None,
+}
+
+#[repr(u64)]
+#[derive(Copy, Clone, Debug, Serialize_repr, Deserialize_repr)]
+pub enum WayVisualType {
+    None,
 }
