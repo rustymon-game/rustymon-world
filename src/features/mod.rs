@@ -5,6 +5,8 @@
 use crate::formats::{AreaVisualType, NodeVisualType, WayVisualType};
 use libosmium::tag_list::TagList;
 
+pub mod simple;
+
 /// A parser for converting OSM tags into rustymon visual types
 pub trait VisualParser {
     fn area(&self, tags: &TagList) -> AreaVisualType;

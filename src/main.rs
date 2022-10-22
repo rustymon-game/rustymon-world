@@ -1,3 +1,4 @@
+use crate::features::simple::SimpleVisual;
 use crate::generator::WorldGenerator;
 use clap::{Parser, Subcommand};
 use libosmium::handler::{AreaAssemblerConfig, Handler};
@@ -46,6 +47,10 @@ enum Commands {
         /// Publish to url instead of printing to stdout
         #[clap(short, long)]
         url: Option<String>,
+
+        /// Config for assigning visual types
+        #[clap(long)]
+        visual: Option<String>,
     },
 }
 
@@ -69,13 +74,21 @@ fn main() -> Result<(), String> {
             center_x,
             center_y,
             url,
+            visual,
         } => {
             let step_num = (cols, rows);
             let step_size = Vector2::new(degree, degree);
             let center = Vector2::new(center_x, center_y);
 
-            let mut handler: WorldGenerator<formats::Production> =
-                WorldGenerator::new(center, step_num, step_size);
+            let visual = if let Some(visual) = visual {
+                let file = std::fs::File::open(visual).map_err(|err| err.to_string())?;
+                serde_json::from_reader(file).map_err(|err| err.to_string())?
+            } else {
+                SimpleVisual::default()
+            };
+
+            let mut handler: WorldGenerator<formats::Production, SimpleVisual> =
+                WorldGenerator::new(center, step_num, step_size, visual);
 
             // start timer
             let mut handler = timer::Timer::wrap(handler);
