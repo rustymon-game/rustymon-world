@@ -4,16 +4,29 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+# Used in grid.rs to store intersections on the stack while using a Vec like interface
 smallvec = { version = "1.9" }
+
+# Used everywhere for geometry
 nalgebra = { version = "0.31" }
+
+# Used in generator.rs to parse osm's pbf files
+libosmium = { version = "0.2.0", path = "../libosmium" }
+
+# json serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }
-serde_repr = { version = "0.1" }
+serde_repr = { version = "0.1" } # used in the ...VisualType prototypes
+
+# Used in main for cli parsing
 clap = { version = "3.2", features = ["derive"] }
-libosmium = { version = "0.2.0" }
+
+# Publish parsed tiles to the rustymon server
 reqwest = { version = "0.11", features = ["json"] }
 tokio = { version = "1.20", features = ["full"] }
 futures = { version = "0.3" }
 rc_protocol = { version = "1.0.0" }
+
+# Logging
 log = { version = "0.4" }
 env_logger = { version = "0.9" }
