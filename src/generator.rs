@@ -1,3 +1,4 @@
+use crate::features::VisualParser;
 use crate::formats::{AreaVisualType, Constructable, NodeVisualType, WayVisualType};
 use crate::geometry::bbox::GenericBox;
 use crate::geometry::grid::{Grid, Index};
@@ -11,7 +12,7 @@ use libosmium::node_ref_list::NodeRefList;
 use libosmium::way::Way;
 use nalgebra::Vector2;
 
-pub struct WorldGenerator<T: Constructable> {
+pub struct WorldGenerator<T: Constructable, V: VisualParser> {
     pub int_box: GenericBox<i32>,
     pub rings: Vec<Vec<Point>>,
 
@@ -22,13 +23,19 @@ pub struct WorldGenerator<T: Constructable> {
     pub tiles: Vec<Construction<T>>,
 
     // Current visual types
+    pub visual_parser: V,
     pub area_type: AreaVisualType,
     pub node_type: NodeVisualType,
     pub way_type: WayVisualType,
 }
 
-impl<T: Constructable> WorldGenerator<T> {
-    pub fn new(center: Point, step_num: (usize, usize), step_size: Point) -> WorldGenerator<T> {
+impl<T: Constructable, V: VisualParser> WorldGenerator<T, V> {
+    pub fn new(
+        center: Point,
+        step_num: (usize, usize),
+        step_size: Point,
+        visual_parser: V,
+    ) -> WorldGenerator<T, V> {
         let min = Vector2::new(
             center.x - step_num.0 as f64 * step_size.x / 2.0,
             center.y - step_num.1 as f64 * step_size.y / 2.0,
@@ -71,6 +78,7 @@ impl<T: Constructable> WorldGenerator<T> {
             size: Vector2::new(step_num.0 as isize, step_num.1 as isize),
             tiles,
 
+            visual_parser,
             area_type: AreaVisualType::None,
             node_type: NodeVisualType::None,
             way_type: WayVisualType::None,
@@ -93,8 +101,13 @@ impl<T: Constructable> WorldGenerator<T> {
     }
 }
 
-impl<T: Constructable> Handler for WorldGenerator<T> {
+impl<T: Constructable, V: VisualParser> Handler for WorldGenerator<T, V> {
     fn area(&mut self, area: &Area) {
+        self.area_type = self.visual_parser.area(area.tags());
+        if matches!(self.area_type, AreaVisualType::None) {
+            return;
+        }
+
         for ring in area.outer_rings() {
             let mut polygon: Vec<Point> = nodes_to_iter(ring).collect();
 
@@ -124,22 +137,6 @@ impl<T: Constructable> Handler for WorldGenerator<T> {
                 );
             }
 
-            self.area_type = AreaVisualType::None;
-            for (key, value) in area.tags().into_iter() {
-                if key == "building" {
-                    self.area_type = AreaVisualType::Building;
-                } else if key == "water" {
-                    self.area_type = AreaVisualType::Water;
-                } else if key == "landuse" && value == "forest" {
-                    self.area_type = AreaVisualType::Forest;
-                } else if key == "landuse" && (value == "meadow" || value == "farmland" || value == "grass") {
-                    self.area_type = AreaVisualType::Field;
-                } else {
-                    continue;
-                }
-                break;
-            }
-
             self.clip_polygon(polygon);
         }
     }
@@ -153,6 +150,11 @@ impl<T: Constructable> Handler for WorldGenerator<T> {
     }
 
     fn way(&mut self, way: &Way) {
+        self.way_type = self.visual_parser.way(way.tags());
+        if matches!(self.way_type, WayVisualType::None) {
+            return;
+        }
+
         let nodes = way.nodes();
 
         // Skip closed ways (only checking nodes' ids)
@@ -169,7 +171,7 @@ impl<T: Constructable> Handler for WorldGenerator<T> {
     }
 }
 
-impl<T: Constructable> Grid for WorldGenerator<T> {
+impl<T: Constructable, V: VisualParser> Grid for WorldGenerator<T, V> {
     fn path_enter(&mut self, index: Index, point: Point) {
         if let Some(tile) = self.get_tile(index) {
             assert_eq!(tile.wip_way.len(), 0);

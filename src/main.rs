@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand};
 use libosmium::handler::{AreaAssemblerConfig, Handler};
 use nalgebra::Vector2;
 
+mod features;
 mod formats;
 mod generator;
 mod geometry;

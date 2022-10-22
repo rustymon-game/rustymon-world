@@ -48,4 +48,11 @@ pub enum NodeVisualType {
 #[derive(Copy, Clone, Debug, Serialize_repr, Deserialize_repr)]
 pub enum WayVisualType {
     None,
+    MotorWay,
+    Trunk,
+    Primary,
+    Secondary,
+    Tertiary,
+    Residential,
+    Rail,
 }
