@@ -7,8 +7,8 @@
 use crate::geometry::{BBox, Point};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
-mod production;
-mod pytest;
+pub mod production;
+pub mod pytest;
 
 /// The version rustymon's backend will store and serve to the clients.
 #[allow(dead_code)]

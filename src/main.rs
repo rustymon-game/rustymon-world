@@ -1,3 +1,6 @@
+#[cfg(not(feature = "binary"))]
+compile_error!("Please compile the main.rs with the \"binary\" feature");
+
 use crate::features::simple::SimpleVisual;
 use crate::generator::WorldGenerator;
 use clap::{Parser, Subcommand};
