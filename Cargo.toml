@@ -11,7 +11,7 @@ binary = ["libosmium", "serde_json", "clap", "reqwest", "tokio", "futures", "rc_
 smallvec = { version = "1.9" }
 
 # Used everywhere for geometry
-nalgebra = { version = "0.31" }
+nalgebra = { version = "0.31", features = ["serde-serialize"] }
 
 # Make the formats serializable
 serde = { version = "1.0", features = ["derive"] }

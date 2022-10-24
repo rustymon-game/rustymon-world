@@ -7,16 +7,16 @@
 use crate::geometry::{BBox, Point};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
+pub mod memeff;
 pub mod production;
-pub mod pytest;
 
 /// The version rustymon's backend will store and serve to the clients.
 #[allow(dead_code)]
 pub type Production = production::Tile;
 
-/// A simplified version of production. It is used by a python script and rendered using matplotlib to inspect geometry errors.
+/// A memory efficient format with a flat point list.
 #[allow(dead_code)]
-pub type Pytest = pytest::Tile;
+pub type MemEff = memeff::Tile;
 
 /// Abstract interface to build a tile from the geometry's "raw" results.
 ///
