@@ -189,12 +189,12 @@ impl<T: Constructable, V: VisualParser> Grid for WorldGenerator<T, V> {
         let way_type = self.way_type;
         if let Some(tile) = self.get_tile(index) {
             tile.wip_way.push(point);
-            tile.constructing.add_way(tile.wip_way.clone(), way_type);
+            tile.constructing.add_way(&tile.wip_way, way_type);
             tile.wip_way.clear();
         }
     }
 
-    fn polygon_add(&mut self, index: Index, polygon: Vec<Point>) {
+    fn polygon_add(&mut self, index: Index, polygon: &[Point]) {
         let area_type = self.area_type;
         if let Some(tile) = self.get_tile(index) {
             if polygon.len() > 0 {

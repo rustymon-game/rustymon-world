@@ -1,7 +1,6 @@
 use super::Constructable;
 use crate::formats::{AreaVisualType, NodeVisualType, WayVisualType};
-use crate::geometry::BBox;
-use nalgebra::Vector2;
+use crate::geometry;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -46,7 +45,7 @@ pub struct Point {
 }
 
 impl Constructable for Tile {
-    fn new(bbox: BBox) -> Self {
+    fn new(bbox: geometry::BBox) -> Self {
         Tile {
             bbox: [bbox.min.x, bbox.min.y, bbox.max.x, bbox.max.y],
             ways: Vec::new(),
@@ -55,7 +54,7 @@ impl Constructable for Tile {
         }
     }
 
-    fn add_area(&mut self, area: Vec<Vector2<f64>>, visual_type: AreaVisualType) {
+    fn add_area(&mut self, area: &[geometry::Point], visual_type: AreaVisualType) {
         self.areas.push(Area {
             spawns: Vec::new(),
             ty: visual_type as usize,
@@ -64,7 +63,7 @@ impl Constructable for Tile {
         });
     }
 
-    fn add_node(&mut self, node: Vector2<f64>, visual_type: NodeVisualType) {
+    fn add_node(&mut self, node: geometry::Point, visual_type: NodeVisualType) {
         self.nodes.push(Node {
             spawns: Vec::new(),
             ty: visual_type as usize,
@@ -76,7 +75,7 @@ impl Constructable for Tile {
         });
     }
 
-    fn add_way(&mut self, way: Vec<crate::geometry::Point>, visual_type: WayVisualType) {
+    fn add_way(&mut self, way: &[geometry::Point], visual_type: WayVisualType) {
         self.ways.push(Way {
             ty: visual_type as usize,
             points: way.into_iter().map(|v| Point { x: v.x, y: v.y }).collect(),

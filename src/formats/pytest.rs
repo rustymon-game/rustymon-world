@@ -26,7 +26,7 @@ impl Constructable for Tile {
         }
     }
 
-    fn add_area(&mut self, area: Vec<Vector2<f64>>, _visual_type: AreaVisualType) {
+    fn add_area(&mut self, area: &[Point], _visual_type: AreaVisualType) {
         self.areas
             .push(area.into_iter().map(|v| (v.x, v.y)).collect());
     }
@@ -35,7 +35,7 @@ impl Constructable for Tile {
         self.nodes.push((node.x, node.y));
     }
 
-    fn add_way(&mut self, way: Vec<Point>, _visual_type: WayVisualType) {
+    fn add_way(&mut self, way: &[Point], _visual_type: WayVisualType) {
         self.ways
             .push(way.into_iter().map(|v| (v.x, v.y)).collect());
     }

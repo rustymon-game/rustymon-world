@@ -16,7 +16,7 @@ pub trait Grid {
 
         // Polygon is already contained in a single tile
         if index_box.min == index_box.max {
-            self.polygon_add(index_box.min, polygon);
+            self.polygon_add(index_box.min, &polygon);
             return;
         }
 
@@ -68,7 +68,7 @@ pub trait Grid {
                 tile.clear();
                 HalfPlane(X, Lt, bbox.max.x).clip(&temp, &mut tile);
 
-                self.polygon_add(index, Vec::from(tile.as_slice()));
+                self.polygon_add(index, &tile);
             }
         }
     }
@@ -156,7 +156,7 @@ pub trait Grid {
     fn path_step(&mut self, index: Index, point: Point);
     fn path_leave(&mut self, index: Index, point: Point);
 
-    fn polygon_add(&mut self, index: Index, polygon: Vec<Point>);
+    fn polygon_add(&mut self, index: Index, polygon: &[Point]);
 
     fn point_add(&mut self, index: Index, point: Point);
 

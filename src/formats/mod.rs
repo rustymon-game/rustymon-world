@@ -23,9 +23,9 @@ pub type Pytest = pytest::Tile;
 /// Highly WIP
 pub trait Constructable {
     fn new(bbox: BBox) -> Self;
-    fn add_area(&mut self, area: Vec<Point>, visual_type: AreaVisualType);
+    fn add_area(&mut self, area: &[Point], visual_type: AreaVisualType);
     fn add_node(&mut self, node: Point, visual_type: NodeVisualType);
-    fn add_way(&mut self, way: Vec<Point>, visual_type: WayVisualType);
+    fn add_way(&mut self, way: &[Point], visual_type: WayVisualType);
 }
 
 #[repr(u64)]
