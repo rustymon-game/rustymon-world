@@ -53,7 +53,7 @@ impl Projection for WebMercator {
     #[inline]
     fn _project(&self, lambda: f64, phi: f64) -> (f64, f64) {
         let x = (lambda + PI) / (2.0 * PI);
-        let y = PI - (PI / 4.0 + phi / 2.0).tan().ln().clamp(0.0, 1.0);
+        let y = (PI - (PI / 4.0 + phi / 2.0).tan().ln()) / (2.0 * PI);
         (x, y)
     }
 }
