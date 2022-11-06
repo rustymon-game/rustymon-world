@@ -33,19 +33,29 @@ pub struct WorldGenerator<P: Projection, T: Constructable, V: VisualParser> {
 impl<P: Projection, T: Constructable, V: VisualParser> WorldGenerator<P, T, V> {
     pub fn new(
         center: Point,
-        step_num: (usize, usize),
-        step_size: Point,
+        (num_cols, num_rows): (usize, usize),
+        zoom: u8,
         visual_parser: V,
         projection: P,
     ) -> Self {
+        // A tiles size in the map's coordinates
+        let step_size = 1.0 / (1 << zoom) as f64;
+        let step_size = Vector2::new(step_size, step_size);
+
+        // The "min" corner of the center tile.
+        let mut center = projection.project_nalgebra(center);
+        center.x -= center.x % step_size.x;
+        center.x -= center.y % step_size.y;
+
+        // The "min" corner of the entire grid
         let min = Vector2::new(
-            center.x - step_num.0 as f64 * step_size.x / 2.0,
-            center.y - step_num.1 as f64 * step_size.y / 2.0,
+            center.x - num_cols as f64 * step_size.x / 2.0,
+            center.y - num_rows as f64 * step_size.y / 2.0,
         );
 
-        let mut tiles = Vec::with_capacity(step_num.0 * step_num.1);
-        for y in 0..step_num.1 {
-            for x in 0..step_num.0 {
+        let mut tiles = Vec::with_capacity(num_cols * num_rows);
+        for y in 0..num_rows {
+            for x in 0..num_cols {
                 let min = Vector2::new(
                     min.x + x as f64 * step_size.x,
                     min.y + y as f64 * step_size.y,
@@ -63,8 +73,8 @@ impl<P: Projection, T: Constructable, V: VisualParser> WorldGenerator<P, T, V> {
         let bbox = BBox {
             min,
             max: Vector2::new(
-                min.x + step_num.0 as f64 * step_size.x,
-                min.y + step_num.1 as f64 * step_size.y,
+                min.x + num_cols as f64 * step_size.x,
+                min.y + num_rows as f64 * step_size.y,
             ),
         };
 
@@ -79,7 +89,7 @@ impl<P: Projection, T: Constructable, V: VisualParser> WorldGenerator<P, T, V> {
 
             bbox,
             step: step_size,
-            size: Vector2::new(step_num.0 as isize, step_num.1 as isize),
+            size: Vector2::new(num_cols as isize, num_rows as isize),
             tiles,
 
             visual_parser,
@@ -154,9 +164,7 @@ impl<P: Projection, T: Constructable, V: VisualParser> Handler for WorldGenerato
     }
 
     fn node(&mut self, node: &Node) {
-        let location = node.location();
-        if location.is_defined() && location.is_valid() {
-            let point = Point::new(location.lon(), location.lat());
+        if let Some(point) = self.projection.project(node) {
             self.clip_point(point);
         }
     }

@@ -58,9 +58,9 @@ struct Args {
     #[clap(short, long, value_parser, default_value_t = 1)]
     rows: usize,
 
-    /// Tile's width in degrees
-    #[clap(short, long, default_value_t = 0.01)]
-    degree: f64,
+    /// Zoom level to produce tiles for
+    #[clap(short, long, default_value_t = 14)]
+    zoom: u8,
 
     /// Data format when writing to stdout
     #[clap(value_enum, short, long, default_value_t = Default::default())]
@@ -78,16 +78,14 @@ fn main() -> Result<(), String> {
         file,
         cols,
         rows,
-        degree,
+        zoom,
         center_x,
         center_y,
-        url,
         visual,
         format,
     } = Args::parse();
 
     let step_num = (cols, rows);
-    let step_size = Vector2::new(degree, degree);
     let center = Vector2::new(center_x, center_y);
 
     let visual = if let Some(visual) = visual {
@@ -98,7 +96,7 @@ fn main() -> Result<(), String> {
     };
 
     let handler: WorldGenerator<_, formats::MemEff, _> =
-        WorldGenerator::new(center, step_num, step_size, visual, projection::Simple);
+        WorldGenerator::new(center, step_num, zoom, visual, projection::WebMercator);
 
     // start timer
     let mut handler = timer::Timer::wrap(handler);

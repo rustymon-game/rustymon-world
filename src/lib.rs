@@ -19,7 +19,7 @@ pub struct Config {
     pub rows: usize,
     pub center_x: f64,
     pub center_y: f64,
-    pub degree: f64,
+    pub zoom: u8,
     pub visual: SimpleVisual,
 }
 
@@ -28,17 +28,16 @@ pub fn parse(config: Config) -> Result<Vec<formats::MemEff>, String> {
         file,
         cols,
         rows,
-        degree,
+        zoom,
         center_x,
         center_y,
         visual,
     } = config;
     let step_num = (cols, rows);
-    let step_size = Vector2::new(degree, degree);
     let center = Vector2::new(center_x, center_y);
 
     let handler: WorldGenerator<_, formats::MemEff, _> =
-        WorldGenerator::new(center, step_num, step_size, visual, projection::Simple);
+        WorldGenerator::new(center, step_num, zoom, visual, projection::Simple);
 
     let mut timed_handler = timer::Timer::wrap(handler);
     timed_handler

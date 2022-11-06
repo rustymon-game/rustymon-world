@@ -29,6 +29,12 @@ pub trait Projection: Copy + 'static {
         })
     }
 
+    fn project_nalgebra(&self, point: Vector2<f64>) -> Vector2<f64> {
+        let [[lambda, phi]] = point.data.0;
+        let (x, y) = self._project(lambda.to_radians(), phi.to_radians());
+        Vector2::new(x, y)
+    }
+
     fn _project(&self, lambda: f64, phi: f64) -> (f64, f64);
 }
 
