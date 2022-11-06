@@ -4,13 +4,17 @@ use crate::geometry::bbox::GenericBox;
 use crate::geometry::grid::{Grid, Index};
 use crate::geometry::polygon::combine_rings;
 use crate::geometry::{BBox, Point};
+use crate::projection::Projection;
 use libosmium::handler::Handler;
 use libosmium::node_ref_list::NodeRefList;
-use libosmium::{Area, Node, NodeRef, Way, PRECISION};
+use libosmium::{Area, Node, Way, PRECISION};
 use nalgebra::Vector2;
 
-pub struct WorldGenerator<T: Constructable, V: VisualParser> {
+pub struct WorldGenerator<P: Projection, T: Constructable, V: VisualParser> {
     pub int_box: GenericBox<i32>,
+    pub projection: P,
+
+    // Buffer to copy rings into before combining them.
     pub rings: Vec<Vec<Point>>,
 
     // Grid
@@ -26,13 +30,14 @@ pub struct WorldGenerator<T: Constructable, V: VisualParser> {
     pub way_type: WayVisualType,
 }
 
-impl<T: Constructable, V: VisualParser> WorldGenerator<T, V> {
+impl<P: Projection, T: Constructable, V: VisualParser> WorldGenerator<P, T, V> {
     pub fn new(
         center: Point,
         step_num: (usize, usize),
         step_size: Point,
         visual_parser: V,
-    ) -> WorldGenerator<T, V> {
+        projection: P,
+    ) -> Self {
         let min = Vector2::new(
             center.x - step_num.0 as f64 * step_size.x / 2.0,
             center.y - step_num.1 as f64 * step_size.y / 2.0,
@@ -68,6 +73,8 @@ impl<T: Constructable, V: VisualParser> WorldGenerator<T, V> {
                 min: bbox.min.map(|f| (f * PRECISION as f64).floor() as i32),
                 max: bbox.max.map(|f| (f * PRECISION as f64).ceil() as i32),
             },
+            projection,
+
             rings: Vec::new(),
 
             bbox,
@@ -96,9 +103,16 @@ impl<T: Constructable, V: VisualParser> WorldGenerator<T, V> {
         self.tiles
             .get_mut((index.x + self.size.x * index.y) as usize)
     }
+
+    fn iter_nodes<'a>(&'_ self, nodes: &'a NodeRefList) -> impl Iterator<Item = Point> + 'a {
+        let projection = self.projection;
+        nodes
+            .iter()
+            .filter_map(move |node| projection.project(node))
+    }
 }
 
-impl<T: Constructable, V: VisualParser> Handler for WorldGenerator<T, V> {
+impl<P: Projection, T: Constructable, V: VisualParser> Handler for WorldGenerator<P, T, V> {
     fn area(&mut self, area: &Area) {
         self.area_type = self.visual_parser.area(area.tags());
         if matches!(self.area_type, AreaVisualType::None) {
@@ -106,7 +120,7 @@ impl<T: Constructable, V: VisualParser> Handler for WorldGenerator<T, V> {
         }
 
         for ring in area.outer_rings() {
-            let mut polygon: Vec<Point> = nodes_to_iter(ring).collect();
+            let mut polygon: Vec<Point> = self.iter_nodes(ring).collect();
 
             // Collect the inner rings into reused Vecs
             let mut num_rings = 0;
@@ -114,13 +128,14 @@ impl<T: Constructable, V: VisualParser> Handler for WorldGenerator<T, V> {
                 // Reuse old Vec or push new one
                 if num_rings < self.rings.len() {
                     self.rings[num_rings].clear();
-                    self.rings[num_rings].extend(nodes_to_iter(inner_ring));
+                    let inner_ring = self.iter_nodes(inner_ring);
+                    self.rings[num_rings].extend(inner_ring);
                 } else {
-                    self.rings.push(nodes_to_iter(inner_ring).collect());
+                    self.rings.push(self.iter_nodes(inner_ring).collect());
                 }
 
                 // Only count non-empty rings
-                if self.rings[num_rings].len() > 0 {
+                if !self.rings[num_rings].is_empty() {
                     num_rings += 1;
                 }
             }
@@ -164,11 +179,11 @@ impl<T: Constructable, V: VisualParser> Handler for WorldGenerator<T, V> {
             _ => return,
         }
 
-        self.clip_path(nodes_to_iter(nodes));
+        self.clip_path(self.iter_nodes(nodes));
     }
 }
 
-impl<T: Constructable, V: VisualParser> Grid for WorldGenerator<T, V> {
+impl<P: Projection, T: Constructable, V: VisualParser> Grid for WorldGenerator<P, T, V> {
     fn path_enter(&mut self, index: Index, point: Point) {
         if let Some(tile) = self.get_tile(index) {
             assert_eq!(tile.wip_way.len(), 0);
@@ -194,7 +209,7 @@ impl<T: Constructable, V: VisualParser> Grid for WorldGenerator<T, V> {
     fn polygon_add(&mut self, index: Index, polygon: &[Point]) {
         let area_type = self.area_type;
         if let Some(tile) = self.get_tile(index) {
-            if polygon.len() > 0 {
+            if !polygon.is_empty() {
                 tile.constructing.add_area(polygon, area_type);
             }
         }
@@ -229,11 +244,4 @@ impl<T: Constructable, V: VisualParser> Grid for WorldGenerator<T, V> {
 pub struct Construction<T> {
     pub constructing: T,
     pub wip_way: Vec<Point>,
-}
-
-fn nodes_to_iter<'a>(ring: &'a NodeRefList) -> impl Iterator<Item = Point> + 'a {
-    ring.iter()
-        .map(NodeRef::get_location)
-        .flatten()
-        .map(|l| Point::new(l.lon(), l.lat()))
 }

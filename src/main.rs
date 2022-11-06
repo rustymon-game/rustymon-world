@@ -11,6 +11,7 @@ mod features;
 mod formats;
 mod generator;
 mod geometry;
+mod projection;
 mod publish;
 mod timer;
 
@@ -90,8 +91,8 @@ fn main() -> Result<(), String> {
                 SimpleVisual::default()
             };
 
-            let mut handler: WorldGenerator<formats::Production, SimpleVisual> =
-                WorldGenerator::new(center, step_num, step_size, visual);
+            let handler: WorldGenerator<_, formats::MemEff, _> =
+                WorldGenerator::new(center, step_num, step_size, visual, projection::Simple);
 
             // start timer
             let mut handler = timer::Timer::wrap(handler);

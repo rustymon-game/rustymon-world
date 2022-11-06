@@ -9,6 +9,7 @@ pub mod features;
 pub mod formats;
 pub mod generator;
 pub mod geometry;
+pub mod projection;
 pub mod timer;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -36,8 +37,8 @@ pub fn parse(config: Config) -> Result<Vec<formats::MemEff>, String> {
     let step_size = Vector2::new(degree, degree);
     let center = Vector2::new(center_x, center_y);
 
-    let handler: WorldGenerator<formats::MemEff, SimpleVisual> =
-        WorldGenerator::new(center, step_num, step_size, visual);
+    let handler: WorldGenerator<_, formats::MemEff, _> =
+        WorldGenerator::new(center, step_num, step_size, visual, projection::Simple);
 
     let mut timed_handler = timer::Timer::wrap(handler);
     timed_handler
