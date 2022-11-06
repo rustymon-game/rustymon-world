@@ -3,6 +3,10 @@ name = "rustymon_world"
 version = "0.1.0"
 edition = "2021"
 
+[[bench]]
+name = "tag_list"
+harness = false
+
 [features]
 binary = ["serde_json", "clap", "reqwest", "tokio", "futures", "rc_protocol", "env_logger"]
 
@@ -35,3 +39,6 @@ rc_protocol = { version = "1.0.0", optional = true }
 # Logging
 log = { version = "0.4" }
 env_logger = { version = "0.9", optional = true }
+
+[dev-dependencies]
+criterion = { version = "~0.4", features = ["html_reports"] }
