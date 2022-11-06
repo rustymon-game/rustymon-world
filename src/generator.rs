@@ -4,12 +4,9 @@ use crate::geometry::bbox::GenericBox;
 use crate::geometry::grid::{Grid, Index};
 use crate::geometry::polygon::combine_rings;
 use crate::geometry::{BBox, Point};
-use libosmium::area::Area;
 use libosmium::handler::Handler;
-use libosmium::location::PRECISION;
-use libosmium::node::{Node, NodeRef};
 use libosmium::node_ref_list::NodeRefList;
-use libosmium::way::Way;
+use libosmium::{Area, Node, NodeRef, Way, PRECISION};
 use nalgebra::Vector2;
 
 pub struct WorldGenerator<T: Constructable, V: VisualParser> {

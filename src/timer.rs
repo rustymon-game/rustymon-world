@@ -1,7 +1,5 @@
-use libosmium::area::Area;
 use libosmium::handler::Handler;
-use libosmium::node::Node;
-use libosmium::way::Way;
+use libosmium::{Area, Node, Way};
 use std::time::{Duration, Instant};
 
 pub struct Timer<T: Handler> {
