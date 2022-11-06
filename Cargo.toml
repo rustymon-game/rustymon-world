@@ -8,7 +8,7 @@ name = "tag_list"
 harness = false
 
 [features]
-binary = ["serde_json", "clap", "reqwest", "tokio", "futures", "rc_protocol", "env_logger"]
+binary = ["serde_json", "clap", "env_logger"]
 
 [dependencies]
 # Used in grid.rs to store intersections on the stack while using a Vec like interface
@@ -29,12 +29,6 @@ serde_json = { version = "1.0", optional = true }
 
 # Cli parsing
 clap = { version = "3.2", features = ["derive"], optional = true }
-
-# Publish parsed tiles to the rustymon server
-reqwest = { version = "0.11", features = ["json"], optional = true }
-tokio = { version = "1.20", features = ["full"], optional = true }
-futures = { version = "0.3", optional = true }
-rc_protocol = { version = "1.0.0", optional = true }
 
 # Logging
 log = { version = "0.4" }
