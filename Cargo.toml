@@ -9,6 +9,7 @@ harness = false
 
 [features]
 binary = ["serde_json", "clap", "env_logger"]
+message-pack = ["rmp-serde"]
 
 [dependencies]
 # Used in grid.rs to store intersections on the stack while using a Vec like interface
@@ -33,6 +34,8 @@ clap = { version = "3.2", features = ["derive"], optional = true }
 # Logging
 log = { version = "0.4" }
 env_logger = { version = "0.9", optional = true }
+
+rmp-serde = { version = "~1.1", optional = true }
 
 [dev-dependencies]
 criterion = { version = "~0.4", features = ["html_reports"] }

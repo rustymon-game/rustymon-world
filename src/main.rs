@@ -3,7 +3,7 @@ compile_error!("Please compile the main.rs with the \"binary\" feature");
 
 use crate::features::simple::SimpleVisual;
 use crate::generator::WorldGenerator;
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use libosmium::handler::{AreaAssemblerConfig, Handler};
 use nalgebra::Vector2;
 
@@ -14,6 +14,29 @@ mod geometry;
 mod projection;
 mod timer;
 
+#[derive(ValueEnum, Debug, Copy, Clone, Default)]
+pub enum Format {
+    #[default]
+    Json,
+
+    #[cfg(feature = "message-pack")]
+    MessagePack,
+}
+impl Format {
+    pub fn write(
+        &self,
+        mut writer: impl std::io::Write,
+        data: &impl serde::Serialize,
+    ) -> Result<(), String> {
+        match self {
+            Format::Json => serde_json::to_writer(writer, data).map_err(|error| error.to_string()),
+            #[cfg(feature = "message-pack")]
+            Format::MessagePack => {
+                rmp_serde::encode::write(&mut writer, data).map_err(|error| error.to_string())
+            }
+        }
+    }
+}
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -96,7 +119,7 @@ fn main() -> Result<(), String> {
 
     let tiles = handler.into_tiles();
 
-    serde_json::to_writer(std::io::stdout(), &tiles).map_err(|error| error.to_string())?;
+    format.write(std::io::stdout(), &tiles)?;
 
     Ok(())
 }
