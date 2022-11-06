@@ -14,7 +14,7 @@ pub enum StringPattern {
 }
 
 /// Simple parser for visual types
-#[derive(Deserialize, Default, Debug)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 pub struct SimpleVisual {
     pub areas: Vec<(HashMap<String, StringPattern>, AreaVisualType)>,
     pub nodes: Vec<(HashMap<String, StringPattern>, NodeVisualType)>,

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-binary = ["libosmium", "serde_json", "clap", "reqwest", "tokio", "futures", "rc_protocol", "log", "env_logger"]
+binary = ["serde_json", "clap", "reqwest", "tokio", "futures", "rc_protocol", "env_logger"]
 
 [dependencies]
 # Used in grid.rs to store intersections on the stack while using a Vec like interface
@@ -18,7 +18,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_repr = { version = "0.1" } # used in the ...VisualType prototypes
 
 # Used in generator.rs to parse osm's pbf files
-libosmium = { version = "0.2.1", path = "../libosmium", optional = true }
+libosmium = { version = "0.2.1", path = "../libosmium" }
 
 # Produce json output and read config
 serde_json = { version = "1.0", optional = true }
@@ -33,5 +33,5 @@ futures = { version = "0.3", optional = true }
 rc_protocol = { version = "1.0.0", optional = true }
 
 # Logging
-log = { version = "0.4", optional = true }
+log = { version = "0.4" }
 env_logger = { version = "0.9", optional = true }
