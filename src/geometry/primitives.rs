@@ -1,5 +1,5 @@
 //! Intersection and clipping primitives
-use super::Point;
+use super::{polygon, Point};
 
 /// A horizontal or vertical line
 ///
@@ -20,11 +20,12 @@ impl<C: Coord> Line<C> {
     ///
     /// ```
     /// # use nalgebra::Vector2;
+    /// # use rustymon_world::geometry::primitives::{Line, X};
     /// let p = Vector2::new(1.0, 2.0);
     /// let q = Vector2::new(-1.0, -2.0);
     /// assert_eq!(
     ///     Line(X, 0.5).intersect(p, q),
-    ///     Vector::new(0.5, 1.0)
+    ///     Vector2::new(0.5, 1.0)
     /// );
     pub fn intersect(&self, from: Point, to: Point) -> Point {
         let value = self.1;
@@ -37,26 +38,24 @@ impl<C: Coord> Line<C> {
 
 /// A half of the plane seperated by a [`Line`]
 ///
-/// Like a [`Line`], a halfplane is defined by a [coordinate selector] and a value.
-/// But additionally it takes a [comparison operator] to select a half of the plane.
+/// Like a [`Line`], a half-plane is defined by a [coordinate selector](Coord) and a value.
+/// But additionally it takes a [comparison operator](Ordering) to select a half of the plane.
 ///
 /// The plane can be used to clip a polygon dumping everything on the other half of the plane (see [`clip`]).
 ///
 /// For example:
 /// - `HalfPlane(X, Gt, 0.0)` defines the half plane of all points with positive x coordinates.
 ///
-/// [coordinate selector]: Coord
-/// [comparison operator]: Ordering
 /// [`clip`]: HalfPlane::clip
 #[derive(Copy, Clone)]
 pub struct HalfPlane<C: Coord, O: Ordering>(pub C, pub O, pub f64);
 impl<C: Coord, O: Ordering> HalfPlane<C, O> {
-    pub fn clip(self, input: &Vec<Point>, output: &mut Vec<Point>) {
+    /// Clip a polygon using this half-plane.
+    ///
+    /// This dumps all vertices ling in the half-plane and adds new vertices at the intersection.
+    pub fn clip(self, input: &[Point], output: &mut Vec<Point>) {
         let value = self.2;
-        for i in 0..input.len() {
-            let current = input[(i + 1) % input.len()];
-            let previous = input[i];
-
+        for (&previous, &current) in polygon::iter_edges(input) {
             let intersection = self.intersect(current, previous);
 
             if O::cmp(C::get(current), value) {

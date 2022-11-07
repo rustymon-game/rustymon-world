@@ -163,11 +163,7 @@ impl<P: Projection, T: Constructable, V: VisualParser> Handler for WorldGenerato
         }
     }
 
-    /*fn node(&mut self, node: &Node) {
-        if let Some(point) = self.projection.project(node) {
-            self.clip_point(point);
-        }
-    }*/
+    fn node(&mut self, _node: &Node) {}
 
     fn way(&mut self, way: &Way) {
         self.way_type = self.visual_parser.way(way.tags());

@@ -212,7 +212,7 @@ impl BBox {
     #[allow(dead_code)]
     #[deprecated = "Use Grid::clip_polygon instead because it scales way better."]
     pub fn clip_polygon<T: IntoIterator<Item = Point>>(&self, subject: T) -> Vec<Point> {
-        let mut a = subject.into_iter().collect();
+        let mut a = Vec::from_iter(subject.into_iter());
         let mut b = Vec::new();
 
         HalfPlane(Y, Gt, self.min.y).clip(&a, &mut b);

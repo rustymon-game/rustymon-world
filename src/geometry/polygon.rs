@@ -67,6 +67,65 @@ pub fn combine_rings(outer_ring: &mut Vec<Point>, inner_rings: &mut [Vec<Point>]
         inner_ring.push(inner_point);
         inner_ring.extend_from_slice(&outer_ring[index..]);
         outer_ring.truncate(index + 1);
-        outer_ring.extend_from_slice(&inner_ring);
+        outer_ring.extend_from_slice(inner_ring);
+    }
+}
+
+/// Create an iterator over a polygon's edges
+pub fn iter_edges(polygon: &[Point]) -> impl Iterator<Item = (&Point, &Point)> {
+    EdgeIterator {
+        polygon,
+        next: 0,
+        finished: polygon.len(),
+    }
+}
+
+struct EdgeIterator<'a> {
+    polygon: &'a [Point],
+    next: usize,
+    finished: usize,
+}
+impl<'a> Iterator for EdgeIterator<'a> {
+    type Item = (&'a Point, &'a Point);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.next == self.finished {
+            None
+        } else {
+            let edge = if self.next + 1 < self.finished {
+                (&self.polygon[self.next], &self.polygon[self.next + 1])
+            } else {
+                (&self.polygon[self.next], &self.polygon[0])
+            };
+            self.next += 1;
+            Some(edge)
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::geometry::polygon::iter_edges;
+    use crate::geometry::Point;
+
+    static SQUARE: [Point; 4] = [
+        Point::new(1.0, 1.0),
+        Point::new(-1.0, 1.0),
+        Point::new(-1.0, -1.0),
+        Point::new(1.0, -1.0),
+    ];
+
+    #[test]
+    pub fn test_iter_edges() {
+        let edges: Vec<(&'static Point, &'static Point)> = iter_edges(&SQUARE).collect();
+        assert_eq!(
+            edges,
+            vec![
+                (&SQUARE[0], &SQUARE[1]),
+                (&SQUARE[1], &SQUARE[2]),
+                (&SQUARE[2], &SQUARE[3]),
+                (&SQUARE[3], &SQUARE[0]),
+            ]
+        );
     }
 }
