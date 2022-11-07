@@ -1,4 +1,5 @@
 use crate::features::VisualParser;
+use crate::formats;
 use crate::formats::{AreaVisualType, Constructable, NodeVisualType, WayVisualType};
 use crate::geometry::bbox::GenericBox;
 use crate::geometry::grid::{Grid, Index};
@@ -10,7 +11,7 @@ use libosmium::node_ref_list::NodeRefList;
 use libosmium::{Area, Node, Way, PRECISION};
 use nalgebra::Vector2;
 
-pub struct WorldGenerator<P: Projection, T: Constructable, V: VisualParser> {
+pub struct WorldGenerator<P: Projection, V: VisualParser> {
     pub int_box: GenericBox<i32>,
     pub projection: P,
 
@@ -21,7 +22,7 @@ pub struct WorldGenerator<P: Projection, T: Constructable, V: VisualParser> {
     pub bbox: BBox,
     pub step: Vector2<f64>,
     pub size: Vector2<isize>,
-    pub tiles: Vec<Construction<T>>,
+    pub tiles: Vec<Construction>,
 
     // Current visual types
     pub visual_parser: V,
@@ -30,7 +31,7 @@ pub struct WorldGenerator<P: Projection, T: Constructable, V: VisualParser> {
     pub way_type: WayVisualType,
 }
 
-impl<P: Projection, T: Constructable, V: VisualParser> WorldGenerator<P, T, V> {
+impl<P: Projection, V: VisualParser> WorldGenerator<P, V> {
     pub fn new(
         center: Point,
         (num_cols, num_rows): (usize, usize),
@@ -61,7 +62,7 @@ impl<P: Projection, T: Constructable, V: VisualParser> WorldGenerator<P, T, V> {
                     min.y + y as f64 * step_size.y,
                 );
                 tiles.push(Construction {
-                    constructing: T::new(BBox {
+                    constructing: formats::MemEff::new(BBox {
                         min,
                         max: min + step_size,
                     }),
@@ -99,14 +100,14 @@ impl<P: Projection, T: Constructable, V: VisualParser> WorldGenerator<P, T, V> {
         }
     }
 
-    pub fn into_tiles(self) -> Vec<T> {
+    pub fn into_tiles(self) -> Vec<formats::MemEff> {
         self.tiles
             .into_iter()
             .map(|tile| tile.constructing)
             .collect()
     }
 
-    fn get_tile(&mut self, index: Index) -> Option<&mut Construction<T>> {
+    fn get_tile(&mut self, index: Index) -> Option<&mut Construction> {
         if index.x < 0 || self.size.x <= index.x || index.y < 0 || self.size.y <= index.y {
             return None;
         }
@@ -122,7 +123,7 @@ impl<P: Projection, T: Constructable, V: VisualParser> WorldGenerator<P, T, V> {
     }
 }
 
-impl<P: Projection, T: Constructable, V: VisualParser> Handler for WorldGenerator<P, T, V> {
+impl<P: Projection, V: VisualParser> Handler for WorldGenerator<P, V> {
     fn area(&mut self, area: &Area) {
         self.area_type = self.visual_parser.area(area.tags());
         if matches!(self.area_type, AreaVisualType::None) {
@@ -187,7 +188,7 @@ impl<P: Projection, T: Constructable, V: VisualParser> Handler for WorldGenerato
     }
 }
 
-impl<P: Projection, T: Constructable, V: VisualParser> Grid for WorldGenerator<P, T, V> {
+impl<P: Projection, V: VisualParser> Grid for WorldGenerator<P, V> {
     fn path_enter(&mut self, index: Index, point: Point) {
         if let Some(tile) = self.get_tile(index) {
             assert_eq!(tile.wip_way.len(), 0);
@@ -245,7 +246,7 @@ impl<P: Projection, T: Constructable, V: VisualParser> Grid for WorldGenerator<P
     }
 }
 
-pub struct Construction<T> {
-    pub constructing: T,
+pub struct Construction {
+    pub constructing: formats::MemEff,
     pub wip_way: Vec<Point>,
 }
