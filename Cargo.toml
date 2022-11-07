@@ -3,6 +3,10 @@ name = "rustymon_world"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "rustymon_world"
+required-features = ["binary"]
+
 [[bench]]
 name = "tag_list"
 harness = false

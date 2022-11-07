@@ -1,18 +1,6 @@
-#[cfg(not(feature = "binary"))]
-compile_error!("Please compile the main.rs with the \"binary\" feature");
-
-use crate::features::simple::SimpleVisual;
-use crate::generator::WorldGenerator;
-use clap::{Parser, Subcommand, ValueEnum};
-use libosmium::handler::{AreaAssemblerConfig, Handler};
-use nalgebra::Vector2;
-
-mod features;
-mod formats;
-mod generator;
-mod geometry;
-mod projection;
-mod timer;
+use clap::{Parser, ValueEnum};
+use rustymon_world::features::simple::SimpleVisual;
+use rustymon_world::{parse, Config};
 
 #[derive(ValueEnum, Debug, Copy, Clone, Default)]
 pub enum Format {
@@ -85,9 +73,6 @@ fn main() -> Result<(), String> {
         format,
     } = Args::parse();
 
-    let step_num = (cols, rows);
-    let center = Vector2::new(center_x, center_y);
-
     let visual = if let Some(visual) = visual {
         let file = std::fs::File::open(visual).map_err(|err| err.to_string())?;
         serde_json::from_reader(file).map_err(|err| err.to_string())?
@@ -95,27 +80,17 @@ fn main() -> Result<(), String> {
         SimpleVisual::default()
     };
 
-    let handler: WorldGenerator<_, formats::MemEff, _> =
-        WorldGenerator::new(center, step_num, zoom, visual, projection::WebMercator);
+    let config = Config {
+        file,
+        cols,
+        rows,
+        center_x,
+        center_y,
+        zoom,
+        visual,
+    };
 
-    // start timer
-    let mut handler = timer::Timer::wrap(handler);
-
-    handler
-        .apply_with_areas(
-            &file,
-            AreaAssemblerConfig {
-                create_empty_areas: false,
-                ..Default::default()
-            },
-        )
-        .map_err(|error| error.into_string().unwrap())?;
-
-    // end timer
-    handler.print();
-    let handler = handler.unwrap();
-
-    let tiles = handler.into_tiles();
+    let tiles = parse(config).map_err(|err| err.to_string());
 
     format.write(std::io::stdout(), &tiles)?;
 
