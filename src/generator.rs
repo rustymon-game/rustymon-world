@@ -22,7 +22,8 @@ pub struct WorldGenerator<P: Projection, V: VisualParser> {
     pub bbox: BBox,
     pub step: Vector2<f64>,
     pub size: Vector2<isize>,
-    pub tiles: Vec<Construction>,
+    pub tiles: Vec<formats::MemEff>,
+    pub way_buffer: Vec<Vec<Point>>,
 
     // Current visual types
     pub visual_parser: V,
@@ -61,13 +62,10 @@ impl<P: Projection, V: VisualParser> WorldGenerator<P, V> {
                     min.x + x as f64 * step_size.x,
                     min.y + y as f64 * step_size.y,
                 );
-                tiles.push(Construction {
-                    constructing: formats::MemEff::new(BBox {
-                        min,
-                        max: min + step_size,
-                    }),
-                    wip_way: Vec::new(),
-                });
+                tiles.push(formats::MemEff::new(BBox {
+                    min,
+                    max: min + step_size,
+                }));
             }
         }
 
@@ -93,6 +91,7 @@ impl<P: Projection, V: VisualParser> WorldGenerator<P, V> {
             size: Vector2::new(num_cols as isize, num_rows as isize),
             tiles,
 
+            way_buffer: vec![Vec::new(); num_cols * num_rows],
             visual_parser,
             area_type: AreaVisualType::None,
             node_type: NodeVisualType::None,
@@ -102,17 +101,24 @@ impl<P: Projection, V: VisualParser> WorldGenerator<P, V> {
 
     pub fn into_tiles(self) -> Vec<formats::MemEff> {
         self.tiles
-            .into_iter()
-            .map(|tile| tile.constructing)
-            .collect()
     }
 
-    fn get_tile(&mut self, index: Index) -> Option<&mut Construction> {
+    fn flatten_index(&self, index: Index) -> Option<usize> {
         if index.x < 0 || self.size.x <= index.x || index.y < 0 || self.size.y <= index.y {
-            return None;
+            None
+        } else {
+            Some((index.x + self.size.x * index.y) as usize)
         }
-        self.tiles
-            .get_mut((index.x + self.size.x * index.y) as usize)
+    }
+
+    fn get_tile(&mut self, index: Index) -> Option<&mut formats::MemEff> {
+        let index = self.flatten_index(index)?;
+        self.tiles.get_mut(index)
+    }
+
+    fn get_wip_way(&mut self, index: Index) -> Option<&mut Vec<Point>> {
+        let index = self.flatten_index(index)?;
+        self.way_buffer.get_mut(index)
     }
 
     fn iter_nodes<'a>(&'_ self, nodes: &'a NodeRefList) -> impl Iterator<Item = Point> + 'a {
@@ -190,24 +196,27 @@ impl<P: Projection, V: VisualParser> Handler for WorldGenerator<P, V> {
 
 impl<P: Projection, V: VisualParser> Grid for WorldGenerator<P, V> {
     fn path_enter(&mut self, index: Index, point: Point) {
-        if let Some(tile) = self.get_tile(index) {
-            assert_eq!(tile.wip_way.len(), 0);
-            tile.wip_way.push(point);
+        if let Some(way) = self.get_wip_way(index) {
+            assert_eq!(way.len(), 0);
+            way.push(point);
         }
     }
 
     fn path_step(&mut self, index: Index, point: Point) {
-        if let Some(tile) = self.get_tile(index) {
-            tile.wip_way.push(point);
+        if let Some(way) = self.get_wip_way(index) {
+            way.push(point);
         }
     }
 
     fn path_leave(&mut self, index: Index, point: Point) {
         let way_type = self.way_type;
-        if let Some(tile) = self.get_tile(index) {
-            tile.wip_way.push(point);
-            tile.constructing.add_way(&tile.wip_way, way_type);
-            tile.wip_way.clear();
+        let Some(index) = self.flatten_index(index) else {return;};
+        if let Some(way) = self.way_buffer.get_mut(index) {
+            way.push(point);
+            if let Some(tile) = self.tiles.get_mut(index) {
+                tile.add_way(way, way_type);
+            }
+            way.clear();
         }
     }
 
@@ -215,7 +224,7 @@ impl<P: Projection, V: VisualParser> Grid for WorldGenerator<P, V> {
         let area_type = self.area_type;
         if let Some(tile) = self.get_tile(index) {
             if !polygon.is_empty() {
-                tile.constructing.add_area(polygon, area_type);
+                tile.add_area(polygon, area_type);
             }
         }
     }
@@ -223,7 +232,7 @@ impl<P: Projection, V: VisualParser> Grid for WorldGenerator<P, V> {
     fn point_add(&mut self, index: Index, point: Point) {
         let node_type = self.node_type;
         if let Some(tile) = self.get_tile(index) {
-            tile.constructing.add_node(point, node_type);
+            tile.add_node(point, node_type);
         }
     }
 
@@ -246,7 +255,3 @@ impl<P: Projection, V: VisualParser> Grid for WorldGenerator<P, V> {
     }
 }
 
-pub struct Construction {
-    pub constructing: formats::MemEff,
-    pub wip_way: Vec<Point>,
-}
