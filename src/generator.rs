@@ -163,11 +163,11 @@ impl<P: Projection, T: Constructable, V: VisualParser> Handler for WorldGenerato
         }
     }
 
-    fn node(&mut self, node: &Node) {
+    /*fn node(&mut self, node: &Node) {
         if let Some(point) = self.projection.project(node) {
             self.clip_point(point);
         }
-    }
+    }*/
 
     fn way(&mut self, way: &Way) {
         self.way_type = self.visual_parser.way(way.tags());
@@ -234,7 +234,7 @@ impl<P: Projection, T: Constructable, V: VisualParser> Grid for WorldGenerator<P
         self.size
     }
 
-    fn tile_box(&self, index: Vector2<isize>) -> BBox {
+    fn tile_box(&self, index: Index) -> BBox {
         let min = self.bbox.min + self.step.component_mul(&index.map(|i| i as f64));
         BBox {
             min,
@@ -242,7 +242,7 @@ impl<P: Projection, T: Constructable, V: VisualParser> Grid for WorldGenerator<P
         }
     }
 
-    fn lookup_point(&self, point: Vector2<f64>) -> Vector2<isize> {
+    fn lookup_point(&self, point: Vector2<f64>) -> Index {
         (point - self.bbox.min)
             .component_div(&self.step)
             .map(|f| f.floor() as isize)

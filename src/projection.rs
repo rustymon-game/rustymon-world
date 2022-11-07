@@ -54,6 +54,35 @@ impl Projection for WebMercator {
     fn _project(&self, lambda: f64, phi: f64) -> (f64, f64) {
         let x = (lambda + PI) / (2.0 * PI);
         let y = (PI - (PI / 4.0 + phi / 2.0).tan().ln()) / (2.0 * PI);
-        (x, y)
+        (x, y.clamp(0.0, 1.0))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::{Projection, WebMercator};
+    use nalgebra::Vector2;
+
+    #[test]
+    fn web_mercator() {
+        let p = WebMercator;
+
+        // 0 N 0 W should be in the map's center i.e. 0.5, 0.5
+        assert_eq!(
+            p.project_nalgebra(Vector2::new(0.0, 0.0)),
+            Vector2::new(0.5, 0.5)
+        );
+
+        // 0 N 180 E should be in the middle of the right edge of the map i.e. (1.0, 0.5)
+        assert_eq!(
+            p.project_nalgebra(Vector2::new(180.0, 0.0)),
+            Vector2::new(1.0, 0.5)
+        );
+
+        // 89 N 0 W would lie outside of the map and should be clipped to (0.5, 0.0)
+        assert_eq!(
+            p.project_nalgebra(Vector2::new(0.0, 89.0)),
+            Vector2::new(0.5, 0.0)
+        );
     }
 }
