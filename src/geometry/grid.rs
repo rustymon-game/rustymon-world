@@ -7,16 +7,99 @@ use smallvec::SmallVec;
 pub type Index = Vector2<isize>;
 pub type IndexBox = GenericBox<isize>;
 
-pub trait Grid {
-    fn clip_polygon(&mut self, polygon: Vec<Point>) {
-        let size = self.index_range();
+pub struct Grid {
+    /// The number of boxes in each direction
+    boxes_num: Index,
+
+    /// Size of each box
+    boxes_size: Vector2<f64>,
+
+    /// Box encompassing the whole grid
+    boundary: BBox,
+
+    /// Vectors to store partial paths in
+    ///
+    /// One for each tile.
+    path_buffer: Vec<Vec<Point>>,
+}
+impl Grid {
+    pub fn new(min: Vector2<f64>, boxes_num: Vector2<usize>, boxes_size: Vector2<f64>) -> Self {
+        Self {
+            boxes_num: Vector2::new(boxes_num.x as isize, boxes_num.y as isize),
+            boxes_size,
+            boundary: BBox {
+                min,
+                max: min
+                    + Vector2::new(
+                        boxes_num.x as f64 * boxes_size.x,
+                        boxes_num.y as f64 * boxes_size.y,
+                    ),
+            },
+            path_buffer: vec![Vec::new(); boxes_num.x * boxes_num.y],
+        }
+    }
+
+    fn flatten_index(&self, index: Index) -> Option<usize> {
+        if (0..self.boxes_num.x).contains(&index.x) && (0..self.boxes_num.y).contains(&index.y) {
+            Some((index.x + self.boxes_num.x * index.y) as usize)
+        } else {
+            None
+        }
+    }
+
+    fn get_partial_path(&mut self, index: Index) -> Option<&mut Vec<Point>> {
+        let index = self.flatten_index(index)?;
+        self.path_buffer.get_mut(index)
+    }
+
+    /// Push a point to a partial path
+    #[inline]
+    fn path_push(&mut self, index: Index, point: Point) {
+        if let Some(path) = self.get_partial_path(index) {
+            path.push(point);
+        }
+    }
+
+    /// Push the final point to a partial path, publish and then empty it.
+    fn path_publish(
+        &mut self,
+        index: Index,
+        point: Point,
+        publish: &mut impl FnMut(usize, &[Point]),
+    ) {
+        let Some(index) = self.flatten_index(index) else {return;};
+        if let Some(path) = self.path_buffer.get_mut(index) {
+            path.push(point);
+            publish(index, path);
+            path.clear();
+        }
+    }
+
+    fn tile_box(&self, index: Vector2<isize>) -> BBox {
+        let min = self.boundary.min + self.boxes_size.component_mul(&index.map(|i| i as f64));
+        BBox {
+            min,
+            max: min + self.boxes_size,
+        }
+    }
+
+    fn lookup_point(&self, point: Vector2<f64>) -> Vector2<isize> {
+        (point - self.boundary.min)
+            .component_div(&self.boxes_size)
+            .map(|f| f.floor() as isize)
+    }
+
+    pub fn clip_polygon(&mut self, polygon: Vec<Point>, mut publish: impl FnMut(usize, &[Point])) {
+        let size = self.boxes_num;
 
         let mut index_box =
             IndexBox::from_iter(polygon.iter().map(|&point| self.lookup_point(point)));
 
         // Polygon is already contained in a single tile
         if index_box.min == index_box.max {
-            self.polygon_add(index_box.min, &polygon);
+            if let Some(index) = self.flatten_index(index_box.min) {
+                publish(index, &polygon);
+            }
             return;
         }
 
@@ -68,12 +151,18 @@ pub trait Grid {
                 tile.clear();
                 HalfPlane(X, Lt, bbox.max.x).clip(&temp, &mut tile);
 
-                self.polygon_add(index, &tile);
+                if let Some(index) = self.flatten_index(index) {
+                    publish(index, &tile);
+                }
             }
         }
     }
 
-    fn clip_path(&mut self, path: impl Iterator<Item = Point>) {
+    pub fn clip_path(
+        &mut self,
+        path: impl Iterator<Item = Point>,
+        mut publish: impl FnMut(usize, &[Point]),
+    ) {
         let mut path = path;
 
         let mut current_p = if let Some(point) = path.next() {
@@ -83,7 +172,7 @@ pub trait Grid {
         };
         let mut current_i = self.lookup_point(current_p);
 
-        self.path_enter(current_i, current_p);
+        self.path_push(current_i, current_p);
 
         for next_p in path {
             let next_i = self.lookup_point(next_p);
@@ -119,9 +208,9 @@ pub trait Grid {
 
                 // Select nearest intersection
                 let (delta_i, intersection) = match intersections.as_slice() {
-                    &[] => unreachable!("The loop condition implies at least on if branch"),
-                    &[tuple] => tuple,
-                    &[tuple_1 @ (_, point_1), tuple_2 @ (_, point_2)] => {
+                    [] => unreachable!("The loop condition implies at least on if branch"),
+                    [tuple] => tuple,
+                    [tuple_1 @ (_, point_1), tuple_2 @ (_, point_2)] => {
                         if (current_p - point_1).norm_squared()
                             < (current_p - point_2).norm_squared()
                         {
@@ -134,38 +223,23 @@ pub trait Grid {
                 };
 
                 // Step to this intersection and continue from there
-                self.path_leave(current_i, intersection);
+                self.path_publish(current_i, *intersection, &mut publish);
                 current_i += delta_i;
-                self.path_enter(current_i, intersection);
+                self.path_push(current_i, *intersection);
             }
-            self.path_step(next_i, next_p);
+            self.path_push(next_i, next_p);
 
             current_p = next_p;
             current_i = self.lookup_point(next_p);
         }
 
-        self.path_leave(current_i, current_p);
+        self.path_publish(current_i, current_p, &mut publish);
     }
 
-    fn clip_point(&mut self, point: Point) {
+    pub fn clip_point(&mut self, point: Point, mut publish: impl FnMut(usize, Point)) {
         let index = self.lookup_point(point);
-        self.point_add(index, point);
+        if let Some(index) = self.flatten_index(index) {
+            publish(index, point);
+        }
     }
-
-    fn path_enter(&mut self, index: Index, point: Point);
-    fn path_step(&mut self, index: Index, point: Point);
-    fn path_leave(&mut self, index: Index, point: Point);
-
-    fn polygon_add(&mut self, index: Index, polygon: &[Point]);
-
-    fn point_add(&mut self, index: Index, point: Point);
-
-    /// Get the excluded upper bound for indexes
-    ///
-    /// Used in [`clip_polygon`] to minimize computation
-    fn index_range(&self) -> Index;
-    /// Grid index to BBox i.e. points
-    fn tile_box(&self, index: Vector2<isize>) -> BBox;
-    /// Point to grid index
-    fn lookup_point(&self, point: Vector2<f64>) -> Vector2<isize>;
 }

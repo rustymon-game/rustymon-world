@@ -2,7 +2,7 @@ use crate::features::VisualParser;
 use crate::formats;
 use crate::formats::{AreaVisualType, Constructable, NodeVisualType, WayVisualType};
 use crate::geometry::bbox::GenericBox;
-use crate::geometry::grid::{Grid, Index};
+use crate::geometry::grid::Grid;
 use crate::geometry::polygon::combine_rings;
 use crate::geometry::{BBox, Point};
 use crate::projection::Projection;
@@ -19,11 +19,8 @@ pub struct WorldGenerator<P: Projection, V: VisualParser> {
     pub rings: Vec<Vec<Point>>,
 
     // Grid
-    pub bbox: BBox,
-    pub step: Vector2<f64>,
-    pub size: Vector2<isize>,
+    pub grid: Grid,
     pub tiles: Vec<formats::MemEff>,
-    pub way_buffer: Vec<Vec<Point>>,
 
     // Current visual types
     pub visual_parser: V,
@@ -86,12 +83,9 @@ impl<P: Projection, V: VisualParser> WorldGenerator<P, V> {
 
             rings: Vec::new(),
 
-            bbox,
-            step: step_size,
-            size: Vector2::new(num_cols as isize, num_rows as isize),
+            grid: Grid::new(min, Vector2::new(num_cols, num_rows), step_size),
             tiles,
 
-            way_buffer: vec![Vec::new(); num_cols * num_rows],
             visual_parser,
             area_type: AreaVisualType::None,
             node_type: NodeVisualType::None,
@@ -103,26 +97,7 @@ impl<P: Projection, V: VisualParser> WorldGenerator<P, V> {
         self.tiles
     }
 
-    fn flatten_index(&self, index: Index) -> Option<usize> {
-        if index.x < 0 || self.size.x <= index.x || index.y < 0 || self.size.y <= index.y {
-            None
-        } else {
-            Some((index.x + self.size.x * index.y) as usize)
-        }
-    }
-
-    fn get_tile(&mut self, index: Index) -> Option<&mut formats::MemEff> {
-        let index = self.flatten_index(index)?;
-        self.tiles.get_mut(index)
-    }
-
-    fn get_wip_way(&mut self, index: Index) -> Option<&mut Vec<Point>> {
-        let index = self.flatten_index(index)?;
-        self.way_buffer.get_mut(index)
-    }
-
-    fn iter_nodes<'a>(&'_ self, nodes: &'a NodeRefList) -> impl Iterator<Item = Point> + 'a {
-        let projection = self.projection;
+    fn iter_nodes(projection: P, nodes: &NodeRefList) -> impl Iterator<Item = Point> + '_ {
         nodes
             .iter()
             .filter_map(move |node| projection.project(node))
@@ -137,18 +112,19 @@ impl<P: Projection, V: VisualParser> Handler for WorldGenerator<P, V> {
         }
 
         for ring in area.outer_rings() {
-            let mut polygon: Vec<Point> = self.iter_nodes(ring).collect();
+            let mut polygon: Vec<Point> = Self::iter_nodes(self.projection, ring).collect();
 
-            // Collect the inner rings into reused Vecs
+            // Collect the inner rings into reused vectors
             let mut num_rings = 0;
             for inner_ring in area.inner_rings(ring) {
                 // Reuse old Vec or push new one
                 if num_rings < self.rings.len() {
                     self.rings[num_rings].clear();
-                    let inner_ring = self.iter_nodes(inner_ring);
+                    let inner_ring = Self::iter_nodes(self.projection, inner_ring);
                     self.rings[num_rings].extend(inner_ring);
                 } else {
-                    self.rings.push(self.iter_nodes(inner_ring).collect());
+                    self.rings
+                        .push(Self::iter_nodes(self.projection, inner_ring).collect());
                 }
 
                 // Only count non-empty rings
@@ -166,7 +142,13 @@ impl<P: Projection, V: VisualParser> Handler for WorldGenerator<P, V> {
                 );
             }
 
-            self.clip_polygon(polygon);
+            self.grid.clip_polygon(polygon, |index, polygon| {
+                if let Some(tile) = self.tiles.get_mut(index) {
+                    if !polygon.is_empty() {
+                        tile.add_area(polygon, self.area_type);
+                    }
+                }
+            });
         }
     }
 
@@ -190,68 +172,11 @@ impl<P: Projection, V: VisualParser> Handler for WorldGenerator<P, V> {
             _ => return,
         }
 
-        self.clip_path(self.iter_nodes(nodes));
+        self.grid
+            .clip_path(Self::iter_nodes(self.projection, nodes), |index, path| {
+                if let Some(tile) = self.tiles.get_mut(index) {
+                    tile.add_way(path, self.way_type);
+                }
+            });
     }
 }
-
-impl<P: Projection, V: VisualParser> Grid for WorldGenerator<P, V> {
-    fn path_enter(&mut self, index: Index, point: Point) {
-        if let Some(way) = self.get_wip_way(index) {
-            assert_eq!(way.len(), 0);
-            way.push(point);
-        }
-    }
-
-    fn path_step(&mut self, index: Index, point: Point) {
-        if let Some(way) = self.get_wip_way(index) {
-            way.push(point);
-        }
-    }
-
-    fn path_leave(&mut self, index: Index, point: Point) {
-        let way_type = self.way_type;
-        let Some(index) = self.flatten_index(index) else {return;};
-        if let Some(way) = self.way_buffer.get_mut(index) {
-            way.push(point);
-            if let Some(tile) = self.tiles.get_mut(index) {
-                tile.add_way(way, way_type);
-            }
-            way.clear();
-        }
-    }
-
-    fn polygon_add(&mut self, index: Index, polygon: &[Point]) {
-        let area_type = self.area_type;
-        if let Some(tile) = self.get_tile(index) {
-            if !polygon.is_empty() {
-                tile.add_area(polygon, area_type);
-            }
-        }
-    }
-
-    fn point_add(&mut self, index: Index, point: Point) {
-        let node_type = self.node_type;
-        if let Some(tile) = self.get_tile(index) {
-            tile.add_node(point, node_type);
-        }
-    }
-
-    fn index_range(&self) -> Index {
-        self.size
-    }
-
-    fn tile_box(&self, index: Index) -> BBox {
-        let min = self.bbox.min + self.step.component_mul(&index.map(|i| i as f64));
-        BBox {
-            min,
-            max: min + self.step,
-        }
-    }
-
-    fn lookup_point(&self, point: Vector2<f64>) -> Index {
-        (point - self.bbox.min)
-            .component_div(&self.step)
-            .map(|f| f.floor() as isize)
-    }
-}
-
