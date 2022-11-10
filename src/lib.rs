@@ -41,7 +41,8 @@ where
     let step_num = (cols, rows);
     let center = Vector2::new(center_x, center_y);
 
-    let handler = WorldGenerator::new(center, step_num, zoom, visual, projection::Simple);
+    let handler =
+        generator::WorldGenerator::new(center, step_num, zoom, visual, projection::Simple);
 
     let mut timed_handler = measurements::TimedHandler::new(handler);
     timed_handler
