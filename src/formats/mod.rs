@@ -1,58 +1,116 @@
-//! Different output formats this tool can produce.
-//!
-//! - `pytest` is a simplified version of production. It is used by a python script and rendered using matplotlib to inspect geometry errors.
-//! - `production` is the version rustymon's backend will store and serve to the clients.
-//!
-//! Each format implements the [`Constructable`] trait which allows it to be constructed using a generic interface.
+use serde::{Deserialize, Serialize};
+
 use crate::geometry::{BBox, Point};
-use serde_repr::{Deserialize_repr, Serialize_repr};
 
-pub mod memeff;
-pub mod production;
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Tile<Feature> {
+    pub min: Point,
+    pub max: Point,
 
-/// The version rustymon's backend will store and serve to the clients.
-#[allow(dead_code)]
-pub type Production = production::Tile;
+    pub areas: Vec<Item<Feature, (usize, usize)>>,
+    pub nodes: Vec<Item<Feature, usize>>,
+    pub ways: Vec<Item<Feature, (usize, usize)>>,
 
-/// A memory efficient format with a flat point list.
-#[allow(dead_code)]
-pub type MemEff = memeff::Tile;
-
-/// Abstract interface to build a tile from the geometry's "raw" results.
-///
-/// Highly WIP
-pub trait Constructable {
-    fn new(bbox: BBox) -> Self;
-    fn add_area(&mut self, area: &[Point], visual_type: AreaVisualType);
-    fn add_node(&mut self, node: Point, visual_type: NodeVisualType);
-    fn add_way(&mut self, way: &[Point], visual_type: WayVisualType);
+    /// Common pool of points used by all areas, nodes and ways
+    pub points: Vec<Point>,
 }
 
-#[repr(u64)]
-#[derive(Copy, Clone, Debug, Serialize_repr, Deserialize_repr)]
-pub enum AreaVisualType {
-    None,
-    Building,
-    Water,
-    Forest,
-    Field,
+#[derive(Serialize, Deserialize, Copy, Clone, Debug)]
+pub struct Item<Feature, Index> {
+    pub feature: Feature,
+    pub oid: usize,
+
+    /// Ether `usize` for nodes or `(usize, usize)` defining a range for areas and ways.
+    pub points: Index,
 }
 
-#[repr(u64)]
-#[derive(Copy, Clone, Debug, Serialize_repr, Deserialize_repr)]
-pub enum NodeVisualType {
-    None,
+/// Implements iterators hiding the flattened points
+impl<Feature> Tile<Feature> {
+    pub fn iter_areas(&self) -> impl Iterator<Item = Item<&Feature, &[Point]>> {
+        self.areas.iter().map(
+            |Item {
+                 feature,
+                 oid,
+                 points: (start, end),
+             }| Item {
+                feature,
+                oid: *oid,
+                points: &self.points[*start..*end],
+            },
+        )
+    }
+
+    pub fn iter_nodes(&self) -> impl Iterator<Item = Item<&Feature, &Point>> {
+        self.nodes.iter().map(
+            |Item {
+                 feature,
+                 oid,
+                 points,
+             }| Item {
+                feature,
+                oid: *oid,
+                points: &self.points[*points],
+            },
+        )
+    }
+
+    pub fn iter_ways(&self) -> impl Iterator<Item = Item<&Feature, &[Point]>> {
+        self.ways.iter().map(
+            |Item {
+                 feature,
+                 oid,
+                 points: (start, end),
+             }| Item {
+                feature,
+                oid: *oid,
+                points: &self.points[*start..*end],
+            },
+        )
+    }
 }
 
-#[repr(u64)]
-#[derive(Copy, Clone, Debug, Serialize_repr, Deserialize_repr)]
-pub enum WayVisualType {
-    None,
-    MotorWay,
-    Trunk,
-    Primary,
-    Secondary,
-    Tertiary,
-    Residential,
-    Rail,
+/// Implement construction process
+impl Tile<usize> {
+    pub fn new(bbox: BBox) -> Self {
+        Tile {
+            min: bbox.min,
+            max: bbox.max,
+            points: Vec::new(),
+            areas: Vec::new(),
+            nodes: Vec::new(),
+            ways: Vec::new(),
+        }
+    }
+
+    pub fn add_area(&mut self, area: &[Point], feature: usize) {
+        let start = self.points.len();
+        self.points.extend_from_slice(area);
+        let end = self.points.len();
+        self.areas.push(Item {
+            feature,
+            oid: 0,
+            points: (start, end),
+        });
+    }
+
+    pub fn add_node(&mut self, node: Point, feature: usize) {
+        let index = self.points.len();
+        self.points.push(node);
+        self.nodes.push(Item {
+            feature,
+            oid: 0,
+            points: index,
+        });
+    }
+
+    pub fn add_way(&mut self, way: &[Point], feature: usize) {
+        let start = self.points.len();
+        self.points.extend_from_slice(way);
+        let end = self.points.len();
+        self.ways.push(Item {
+            feature,
+            oid: 0,
+            points: (start, end),
+        });
+    }
 }

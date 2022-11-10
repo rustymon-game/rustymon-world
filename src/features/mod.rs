@@ -2,16 +2,15 @@
 //!
 //! For example turn a real world shop into a virtual world one
 
-use crate::formats::{AreaVisualType, NodeVisualType, WayVisualType};
 use libosmium::tag_list::TagList;
 
 pub mod simple;
 
 /// A parser for converting OSM tags into rustymon visual types
 pub trait VisualParser {
-    fn area(&self, tags: &TagList) -> AreaVisualType;
-    fn node(&self, tags: &TagList) -> NodeVisualType;
-    fn way(&self, tags: &TagList) -> WayVisualType;
+    fn area(&self, tags: &TagList) -> usize;
+    fn node(&self, tags: &TagList) -> usize;
+    fn way(&self, tags: &TagList) -> usize;
 }
 
 /// Decide whether or not an area, node or way should be processed, based on its tags.

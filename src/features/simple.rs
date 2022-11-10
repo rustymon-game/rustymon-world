@@ -1,5 +1,4 @@
 use crate::features::VisualParser;
-use crate::formats::{AreaVisualType, NodeVisualType, WayVisualType};
 use libosmium::tag_list::TagList;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -16,22 +15,22 @@ pub enum StringPattern {
 /// Simple parser for visual types
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct SimpleVisual {
-    pub areas: Vec<(HashMap<String, StringPattern>, AreaVisualType)>,
-    pub nodes: Vec<(HashMap<String, StringPattern>, NodeVisualType)>,
-    pub ways: Vec<(HashMap<String, StringPattern>, WayVisualType)>,
+    pub areas: Vec<(HashMap<String, StringPattern>, usize)>,
+    pub nodes: Vec<(HashMap<String, StringPattern>, usize)>,
+    pub ways: Vec<(HashMap<String, StringPattern>, usize)>,
 }
 
 impl VisualParser for SimpleVisual {
-    fn area(&self, tags: &TagList) -> AreaVisualType {
-        get_type(tags, &self.areas).unwrap_or(AreaVisualType::None)
+    fn area(&self, tags: &TagList) -> usize {
+        get_type(tags, &self.areas).unwrap_or_default()
     }
 
-    fn node(&self, tags: &TagList) -> NodeVisualType {
-        get_type(tags, &self.nodes).unwrap_or(NodeVisualType::None)
+    fn node(&self, tags: &TagList) -> usize {
+        get_type(tags, &self.nodes).unwrap_or_default()
     }
 
-    fn way(&self, tags: &TagList) -> WayVisualType {
-        get_type(tags, &self.ways).unwrap_or(WayVisualType::None)
+    fn way(&self, tags: &TagList) -> usize {
+        get_type(tags, &self.ways).unwrap_or_default()
     }
 }
 

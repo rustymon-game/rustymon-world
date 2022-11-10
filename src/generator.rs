@@ -1,6 +1,5 @@
 use crate::features::VisualParser;
-use crate::formats;
-use crate::formats::{AreaVisualType, Constructable, NodeVisualType, WayVisualType};
+use crate::formats::Tile;
 use crate::geometry::bbox::GenericBox;
 use crate::geometry::grid::Grid;
 use crate::geometry::polygon::combine_rings;
@@ -20,13 +19,13 @@ pub struct WorldGenerator<P: Projection, V: VisualParser> {
 
     // Grid
     pub grid: Grid,
-    pub tiles: Vec<formats::MemEff>,
+    pub tiles: Vec<Tile<usize>>,
 
     // Current visual types
     pub visual_parser: V,
-    pub area_type: AreaVisualType,
-    pub node_type: NodeVisualType,
-    pub way_type: WayVisualType,
+    pub area_type: usize,
+    pub node_type: usize,
+    pub way_type: usize,
 }
 
 impl<P: Projection, V: VisualParser> WorldGenerator<P, V> {
@@ -59,7 +58,7 @@ impl<P: Projection, V: VisualParser> WorldGenerator<P, V> {
                     min.x + x as f64 * step_size.x,
                     min.y + y as f64 * step_size.y,
                 );
-                tiles.push(formats::MemEff::new(BBox {
+                tiles.push(Tile::new(BBox {
                     min,
                     max: min + step_size,
                 }));
@@ -87,13 +86,13 @@ impl<P: Projection, V: VisualParser> WorldGenerator<P, V> {
             tiles,
 
             visual_parser,
-            area_type: AreaVisualType::None,
-            node_type: NodeVisualType::None,
-            way_type: WayVisualType::None,
+            area_type: unsafe { std::mem::MaybeUninit::uninit().assume_init() }, // Only every read
+            node_type: unsafe { std::mem::MaybeUninit::uninit().assume_init() }, // directly after
+            way_type: unsafe { std::mem::MaybeUninit::uninit().assume_init() },  // assignment.
         }
     }
 
-    pub fn into_tiles(self) -> Vec<formats::MemEff> {
+    pub fn into_tiles(self) -> Vec<Tile<usize>> {
         self.tiles
     }
 
@@ -107,7 +106,7 @@ impl<P: Projection, V: VisualParser> WorldGenerator<P, V> {
 impl<P: Projection, V: VisualParser> Handler for WorldGenerator<P, V> {
     fn area(&mut self, area: &Area) {
         self.area_type = self.visual_parser.area(area.tags());
-        if matches!(self.area_type, AreaVisualType::None) {
+        if self.area_type == 0 {
             return;
         }
 
@@ -156,7 +155,7 @@ impl<P: Projection, V: VisualParser> Handler for WorldGenerator<P, V> {
 
     fn way(&mut self, way: &Way) {
         self.way_type = self.visual_parser.way(way.tags());
-        if matches!(self.way_type, WayVisualType::None) {
+        if self.way_type == 0 {
             return;
         }
 

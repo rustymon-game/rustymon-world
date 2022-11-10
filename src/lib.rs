@@ -1,13 +1,12 @@
 use std::cell::RefCell;
 use std::marker::PhantomData;
 
+use crate::features::simple::SimpleVisual;
+use crate::features::FeatureParser;
 use libosmium::handler::{AreaAssemblerConfig, Handler};
 use nalgebra::Vector2;
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize, Serializer};
-
-use crate::features::simple::SimpleVisual;
-use crate::generator::WorldGenerator;
 
 pub mod features;
 pub mod formats;
@@ -27,7 +26,7 @@ pub struct Config {
     pub visual: SimpleVisual,
 }
 
-pub fn parse(config: Config) -> Result<Vec<formats::MemEff>, String> {
+pub fn parse(config: Config) -> Result<Vec<formats::Tile<usize>>, String> {
     let Config {
         file,
         cols,
@@ -58,10 +57,10 @@ pub fn parse(config: Config) -> Result<Vec<formats::MemEff>, String> {
     Ok(handler.into_tiles())
 }
 
-pub fn convert_format<T, F>(tiles: Vec<formats::MemEff>, convert: F) -> impl Serialize
+pub fn convert_format<T, F>(tiles: Vec<formats::Tile<usize>>, convert: F) -> impl Serialize
 where
     T: Serialize,
-    F: Fn(formats::MemEff) -> T,
+    F: Fn(formats::Tile<usize>) -> T,
 {
     SerializableIterator {
         iterator: RefCell::new(Some(tiles.into_iter().map(convert))),
