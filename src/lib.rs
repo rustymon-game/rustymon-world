@@ -13,8 +13,8 @@ pub mod features;
 pub mod formats;
 pub mod generator;
 pub mod geometry;
+pub mod measurements;
 pub mod projection;
-pub mod timer;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
@@ -42,7 +42,7 @@ pub fn parse(config: Config) -> Result<Vec<formats::MemEff>, String> {
 
     let handler = WorldGenerator::new(center, step_num, zoom, visual, projection::Simple);
 
-    let mut timed_handler = timer::Timer::wrap(handler);
+    let mut timed_handler = measurements::TimedHandler::new(handler);
     timed_handler
         .apply_with_areas(
             &file,
@@ -53,8 +53,7 @@ pub fn parse(config: Config) -> Result<Vec<formats::MemEff>, String> {
         )
         .map_err(|error| error.into_string().unwrap())?;
     timed_handler.print();
-
-    let handler = timed_handler.unwrap();
+    let handler = timed_handler.into_handler();
 
     Ok(handler.into_tiles())
 }
