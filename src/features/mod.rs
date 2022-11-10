@@ -4,6 +4,8 @@
 
 use libosmium::tag_list::TagList;
 
+#[cfg(feature = "aho-corasick")]
+pub mod aho_corasick;
 pub mod simple;
 
 pub trait FeatureParser {

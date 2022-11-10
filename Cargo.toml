@@ -13,9 +13,13 @@ harness = false
 
 [features]
 binary = ["serde_json", "clap", "env_logger"]
+aho-corasick = ["serde_json", "dep:aho-corasick"]
 message-pack = ["rmp-serde"]
 
 [dependencies]
+# Fast pre parsing of tags
+aho-corasick = { version = "~0.7", optional = true }
+
 # Used in grid.rs to store intersections on the stack while using a Vec like interface
 smallvec = { version = "1.9" }
 

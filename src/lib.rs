@@ -1,7 +1,6 @@
 use std::cell::RefCell;
 use std::marker::PhantomData;
 
-use crate::features::simple::SimpleVisual;
 use crate::features::FeatureParser;
 use libosmium::handler::{AreaAssemblerConfig, Handler};
 use nalgebra::Vector2;
@@ -26,7 +25,10 @@ pub struct Config<Visual: FeatureParser> {
     pub visual: Visual,
 }
 
-pub fn parse(config: Config<SimpleVisual>) -> Result<Vec<formats::Tile<usize>>, String> {
+pub fn parse<Visual>(config: Config<Visual>) -> Result<Vec<formats::Tile<usize>>, String>
+where
+    Visual: FeatureParser<AreaFeature = usize, NodeFeature = usize, WayFeature = usize>,
+{
     let Config {
         file,
         cols,
