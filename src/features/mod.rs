@@ -6,11 +6,14 @@ use libosmium::tag_list::TagList;
 
 pub mod simple;
 
-/// A parser for converting OSM tags into rustymon visual types
-pub trait VisualParser {
-    fn area(&self, tags: &TagList) -> usize;
-    fn node(&self, tags: &TagList) -> usize;
-    fn way(&self, tags: &TagList) -> usize;
+pub trait FeatureParser {
+    type AreaFeature;
+    type NodeFeature;
+    type WayFeature;
+
+    fn area(&self, area: &TagList) -> Option<Self::AreaFeature>;
+    fn node(&self, node: &TagList) -> Option<Self::NodeFeature>;
+    fn way(&self, way: &TagList) -> Option<Self::WayFeature>;
 }
 
 /// Decide whether or not an area, node or way should be processed, based on its tags.

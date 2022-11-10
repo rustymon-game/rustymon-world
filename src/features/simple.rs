@@ -1,53 +1,74 @@
-use crate::features::VisualParser;
 use libosmium::tag_list::TagList;
 use serde::{Deserialize, Serialize};
+use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
+use std::hash::Hash;
 
-#[derive(Deserialize, Serialize, Default, Debug)]
-#[serde(untagged)]
-pub enum StringPattern {
-    #[default]
-    Any,
-    Single(String),
-    Set(HashSet<String>),
-}
+use crate::features::FeatureParser;
 
 /// Simple parser for visual types
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct SimpleVisual {
-    pub areas: Vec<(HashMap<String, StringPattern>, usize)>,
-    pub nodes: Vec<(HashMap<String, StringPattern>, usize)>,
-    pub ways: Vec<(HashMap<String, StringPattern>, usize)>,
+    pub areas: Vec<Branch<String>>,
+    pub nodes: Vec<Branch<String>>,
+    pub ways: Vec<Branch<String>>,
 }
 
-impl VisualParser for SimpleVisual {
-    fn area(&self, tags: &TagList) -> usize {
-        get_type(tags, &self.areas).unwrap_or_default()
+pub type Branch<T> = (HashMap<T, Pattern<T>>, usize);
+
+#[derive(Deserialize, Serialize, Default, Debug)]
+#[serde(untagged)]
+pub enum Pattern<T: Eq + Hash> {
+    #[default]
+    Any,
+    Single(T),
+    Set(HashSet<T>),
+}
+
+impl FeatureParser for SimpleVisual {
+    type AreaFeature = usize;
+    type NodeFeature = usize;
+    type WayFeature = usize;
+
+    fn area(&self, tags: &TagList) -> Option<Self::AreaFeature> {
+        parse_tags(tags, &self.areas)
     }
 
-    fn node(&self, tags: &TagList) -> usize {
-        get_type(tags, &self.nodes).unwrap_or_default()
+    fn node(&self, tags: &TagList) -> Option<Self::NodeFeature> {
+        parse_tags(tags, &self.nodes)
     }
 
-    fn way(&self, tags: &TagList) -> usize {
-        get_type(tags, &self.ways).unwrap_or_default()
+    fn way(&self, tags: &TagList) -> Option<Self::WayFeature> {
+        parse_tags(tags, &self.ways)
     }
 }
 
-fn get_type<T: Copy>(tags: &TagList, lookup: &[(HashMap<String, StringPattern>, T)]) -> Option<T> {
-    let tags: HashMap<String, String> = HashMap::from_iter(
-        tags.into_iter()
-            .map(|(k, v)| (k.to_string(), v.to_string())),
-    );
+/// Parse tags using the simple "match-ish" format
+///
+/// ## Generics:
+/// This method is generic over the **K**ey and **V**alue used to form the tags
+/// as well as their **O**wned and **B**orrowed versions.
+pub(crate) fn parse_tags<'a, Iter, KO, KB, VO, VB>(
+    tags: Iter,
+    lookup: &[(HashMap<KO, Pattern<VO>>, usize)],
+) -> Option<usize>
+where
+    Iter: IntoIterator<Item = (&'a KB, &'a VB)>,
+    KO: Eq + Hash + Borrow<KB>,
+    KB: Eq + Hash + ?Sized + 'a,
+    VO: Eq + Hash + Borrow<VB>,
+    VB: Eq + Hash + ?Sized + 'a,
+{
+    let tags: HashMap<&'a KB, &'a VB> = HashMap::from_iter(tags);
 
     for (map, result) in lookup {
         let mut matches = true;
         for (exp_key, exp_value) in map {
-            if let Some(tag_value) = tags.get(exp_key) {
+            if let Some(&tag_value) = tags.get(exp_key.borrow()) {
                 match exp_value {
-                    StringPattern::Any => continue,
-                    StringPattern::Single(exp_value) if exp_value == tag_value => continue,
-                    StringPattern::Set(exp_values) if exp_values.contains(tag_value) => continue,
+                    Pattern::Any => continue,
+                    Pattern::Single(exp_value) if exp_value.borrow() == tag_value => continue,
+                    Pattern::Set(exp_values) if exp_values.contains(tag_value) => continue,
                     _ => {
                         matches = false;
                         break;

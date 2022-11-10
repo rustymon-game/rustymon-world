@@ -1,4 +1,4 @@
-use crate::features::VisualParser;
+use crate::features::FeatureParser;
 use crate::formats::Tile;
 use crate::geometry::bbox::GenericBox;
 use crate::geometry::grid::Grid;
@@ -10,7 +10,7 @@ use libosmium::node_ref_list::NodeRefList;
 use libosmium::{Area, Node, Way, PRECISION};
 use nalgebra::Vector2;
 
-pub struct WorldGenerator<P: Projection, V: VisualParser> {
+pub struct WorldGenerator<P: Projection, V: FeatureParser> {
     pub int_box: GenericBox<i32>,
     pub projection: P,
 
@@ -23,12 +23,12 @@ pub struct WorldGenerator<P: Projection, V: VisualParser> {
 
     // Current visual types
     pub visual_parser: V,
-    pub area_type: usize,
-    pub node_type: usize,
-    pub way_type: usize,
+    pub area_type: V::AreaFeature,
+    pub node_type: V::NodeFeature,
+    pub way_type: V::WayFeature,
 }
 
-impl<P: Projection, V: VisualParser> WorldGenerator<P, V> {
+impl<P: Projection, V: FeatureParser> WorldGenerator<P, V> {
     pub fn new(
         center: Point,
         (num_cols, num_rows): (usize, usize),
@@ -103,10 +103,17 @@ impl<P: Projection, V: VisualParser> WorldGenerator<P, V> {
     }
 }
 
-impl<P: Projection, V: VisualParser> Handler for WorldGenerator<P, V> {
+impl<P: Projection, V: FeatureParser> Handler for WorldGenerator<P, V>
+where
+    V: FeatureParser<AreaFeature = usize, NodeFeature = usize, WayFeature = usize>,
+{
     fn area(&mut self, area: &Area) {
-        self.area_type = self.visual_parser.area(area.tags());
-        if self.area_type == 0 {
+        if area.tags().is_empty() {
+            return;
+        }
+        if let Some(feature) = self.visual_parser.area(area.tags()) {
+            self.area_type = feature;
+        } else {
             return;
         }
 
@@ -151,11 +158,32 @@ impl<P: Projection, V: VisualParser> Handler for WorldGenerator<P, V> {
         }
     }
 
-    fn node(&mut self, _node: &Node) {}
+    fn node(&mut self, node: &Node) {
+        if node.tags().is_empty() {
+            return;
+        }
+        if let Some(feature) = self.visual_parser.node(node.tags()) {
+            self.node_type = feature;
+        } else {
+            return;
+        }
+
+        if let Some(point) = self.projection.project(node) {
+            self.grid.clip_point(point, |index, point| {
+                if let Some(tile) = self.tiles.get_mut(index) {
+                    tile.add_node(point, self.node_type);
+                }
+            });
+        }
+    }
 
     fn way(&mut self, way: &Way) {
-        self.way_type = self.visual_parser.way(way.tags());
-        if self.way_type == 0 {
+        if way.tags().is_empty() {
+            return;
+        }
+        if let Some(feature) = self.visual_parser.way(way.tags()) {
+            self.way_type = feature;
+        } else {
             return;
         }
 

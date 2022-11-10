@@ -16,17 +16,17 @@ pub mod measurements;
 pub mod projection;
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Config {
+pub struct Config<Visual: FeatureParser> {
     pub file: String,
     pub cols: usize,
     pub rows: usize,
     pub center_x: f64,
     pub center_y: f64,
     pub zoom: u8,
-    pub visual: SimpleVisual,
+    pub visual: Visual,
 }
 
-pub fn parse(config: Config) -> Result<Vec<formats::Tile<usize>>, String> {
+pub fn parse(config: Config<SimpleVisual>) -> Result<Vec<formats::Tile<usize>>, String> {
     let Config {
         file,
         cols,
