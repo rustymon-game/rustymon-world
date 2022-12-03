@@ -32,7 +32,22 @@ impl<C: Coord> Line<C> {
 
         let delta = to - from;
         let lambda = (value - C::get(from)) / C::get(delta);
+
         delta * lambda + from
+    }
+
+    /// Calculate the intersection of this (infinite) line with a (finite) line segment defined by its endpoints
+    pub fn intersect_segment(&self, from: Point, to: Point) -> Option<Point> {
+        let value = self.1;
+
+        let delta = to - from;
+        let lambda = (value - C::get(from)) / C::get(delta);
+
+        if (0.0..=1.0).contains(&lambda) {
+            Some(delta * lambda + from)
+        } else {
+            None
+        }
     }
 }
 

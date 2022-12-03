@@ -1,3 +1,4 @@
+use crate::geometry::primitives::{Line, X};
 use crate::geometry::Point;
 
 /// Combine an outer ring with its inner rings into a single polygon
@@ -71,6 +72,31 @@ pub fn combine_rings(outer_ring: &mut Vec<Point>, inner_rings: &mut [Vec<Point>]
     }
 }
 
+/// Check whether a polygon contains a point.
+///
+/// It implements Sunday's version of the [winding number algorithm](https://en.wikipedia.org/wiki/Point_in_polygon#Winding_number_algorithm).
+/// I.e. it uses the "non-zero" rule.
+pub fn contains_point(polygon: &[Point], point: Point) -> bool {
+    let mut winding_number = 0;
+
+    let line = Line(X, point.x);
+    for (from, to) in iter_edges(polygon) {
+        let Some(intersection) = line.intersect_segment(*from, *to) else {
+            continue;
+        };
+        // Consider ray instead of full line
+        if intersection.y >= point.y {
+            if to.x < from.x {
+                winding_number += 1;
+            } else {
+                winding_number -= 1;
+            }
+        }
+    }
+
+    winding_number != 0
+}
+
 /// Create an iterator over a polygon's edges
 pub fn iter_edges(polygon: &[Point]) -> impl Iterator<Item = (&Point, &Point)> {
     EdgeIterator {
@@ -105,6 +131,7 @@ impl<'a> Iterator for EdgeIterator<'a> {
 
 #[cfg(test)]
 mod test {
+    use crate::geometry::polygon::contains_point;
     use crate::geometry::polygon::iter_edges;
     use crate::geometry::Point;
 
@@ -127,5 +154,12 @@ mod test {
                 (&SQUARE[3], &SQUARE[0]),
             ]
         );
+    }
+
+    #[test]
+    pub fn test_contains_point() {
+        assert!(contains_point(&SQUARE, Point::new(0.0, 0.0)));
+        assert!(contains_point(&SQUARE, Point::new(0.13, 0.37)));
+        assert!(!contains_point(&SQUARE, Point::new(-1.13, -1.37)));
     }
 }
