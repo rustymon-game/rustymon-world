@@ -7,6 +7,8 @@ pub mod aho_corasick;
 pub mod config;
 pub mod pest_ext;
 pub mod simple;
+#[cfg(feature = "yada")]
+pub mod yada;
 
 /// Trait alias for a `IntoIterator` over pairs of `&'t str`
 pub trait Tags<'t>: IntoIterator<Item = (&'t str, &'t str)> {}

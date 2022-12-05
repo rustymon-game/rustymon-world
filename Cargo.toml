@@ -13,12 +13,14 @@ harness = false
 
 [features]
 binary = ["serde_json", "clap", "env_logger"]
-aho-corasick = ["serde_json", "dep:aho-corasick"]
 message-pack = ["rmp-serde"]
 
 [dependencies]
 # Fast pre parsing of tags
 aho-corasick = { version = "~0.7", optional = true }
+yada = { version = "~0.5", optional = true }
+
+# Config parsing
 pest = { version = "~2.5" }
 pest_derive = { version = "~2.5" }
 
