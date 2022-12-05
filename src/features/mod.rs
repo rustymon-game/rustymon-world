@@ -2,8 +2,6 @@
 //!
 //! For example turn a real world shop into a virtual world one
 
-#[cfg(feature = "aho-corasick")]
-pub mod aho_corasick;
 pub mod config;
 pub mod pest_ext;
 pub mod simple;

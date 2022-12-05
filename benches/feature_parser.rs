@@ -32,13 +32,9 @@ fn compare(c: &mut Criterion) {
 
     // Load parser
     let config = dir.join("../visual.config");
-    let content = std::fs::read_to_string(&config).unwrap();
 
-    let simple = features::config::ConfigParser::borrowing()
-        .parse_file(&content)
-        .unwrap();
-    let aho_corasick = features::aho_corasick::ACParser::from_file(&config).unwrap();
     let yada = features::yada::YadaParser::from_file(&config).unwrap();
+    // TODO more parser prototypes
 
     let mut group = c.benchmark_group("Feature Parser");
 
@@ -55,7 +51,7 @@ fn compare(c: &mut Criterion) {
             }
         )+};
     }
-    dynamic_for!(parser in [simple, aho_corasick, yada]);
+    dynamic_for!(parser in [yada]);
 
     group.finish();
 }
