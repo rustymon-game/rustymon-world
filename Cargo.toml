@@ -7,8 +7,16 @@ edition = "2021"
 name = "rustymon_world"
 required-features = ["binary"]
 
+[[bin]]
+name = "get_tag_samples"
+required-features = ["message-pack"]
+
 [[bench]]
 name = "tag_list"
+harness = false
+
+[[bench]]
+name = "feature_parser"
 harness = false
 
 [features]
@@ -35,7 +43,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_repr = { version = "0.1" } # used in the ...VisualType prototypes
 
 # Used in generator.rs to parse osm's pbf files
-libosmium = { version = "0.2.1", path = "../libosmium" }
+libosmium = { version = "0.2.1", path = "../libosmium", features = ["serde"] }
 
 # Produce json output and read config
 serde_json = { version = "1.0", optional = true }
