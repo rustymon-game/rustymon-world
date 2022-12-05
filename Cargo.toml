@@ -16,6 +16,7 @@ name = "feature_parser"
 harness = false
 
 [features]
+default = ["binary", "message-pack"]
 binary = ["serde_json", "clap", "env_logger"]
 message-pack = ["rmp-serde"]
 
