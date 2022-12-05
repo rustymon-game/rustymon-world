@@ -1,10 +1,9 @@
-use libosmium::tag_list::TagList;
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
-use crate::features::FeatureParser;
+use crate::features::{FeatureParser, Tags};
 
 /// Simple parser for visual types
 #[derive(Serialize, Deserialize, Default, Debug)]
@@ -30,15 +29,15 @@ impl FeatureParser for SimpleVisual {
     type NodeFeature = usize;
     type WayFeature = usize;
 
-    fn area(&self, tags: &TagList) -> Option<Self::AreaFeature> {
+    fn area<'t>(&self, tags: impl Tags<'t>) -> Option<Self::AreaFeature> {
         parse_tags(tags, &self.areas)
     }
 
-    fn node(&self, tags: &TagList) -> Option<Self::NodeFeature> {
+    fn node<'t>(&self, tags: impl Tags<'t>) -> Option<Self::NodeFeature> {
         parse_tags(tags, &self.nodes)
     }
 
-    fn way(&self, tags: &TagList) -> Option<Self::WayFeature> {
+    fn way<'t>(&self, tags: impl Tags<'t>) -> Option<Self::WayFeature> {
         parse_tags(tags, &self.ways)
     }
 }

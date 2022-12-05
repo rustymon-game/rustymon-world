@@ -3,10 +3,9 @@ use std::fs::File;
 use std::path::Path;
 
 use aho_corasick::AhoCorasick;
-use libosmium::tag_list::TagList;
 use serde::{Deserialize, Serialize};
 
-use crate::features::{simple, FeatureParser};
+use crate::features::{simple, FeatureParser, Tags};
 
 /// The config format read from disk
 #[derive(Serialize, Deserialize, Default, Debug)]
@@ -58,7 +57,7 @@ impl FeatureParser for ACParser {
     type NodeFeature = usize;
     type WayFeature = usize;
 
-    fn area(&self, area: &TagList) -> Option<Self::AreaFeature> {
+    fn area<'t>(&self, area: impl Tags<'t>) -> Option<Self::AreaFeature> {
         let area = self.tokenize(area);
         simple::parse_tags(
             area.iter()
@@ -67,7 +66,7 @@ impl FeatureParser for ACParser {
         )
     }
 
-    fn node(&self, node: &TagList) -> Option<Self::NodeFeature> {
+    fn node<'t>(&self, node: impl Tags<'t>) -> Option<Self::NodeFeature> {
         let node = self.tokenize(node);
         simple::parse_tags(
             node.iter()
@@ -76,7 +75,7 @@ impl FeatureParser for ACParser {
         )
     }
 
-    fn way(&self, way: &TagList) -> Option<Self::WayFeature> {
+    fn way<'t>(&self, way: impl Tags<'t>) -> Option<Self::WayFeature> {
         let way = self.tokenize(way);
         simple::parse_tags(
             way.iter()
@@ -96,9 +95,9 @@ impl ACParser {
         }
     }
 
-    fn tokenize(&self, tags: &TagList) -> Vec<(usize, Option<usize>)> {
+    fn tokenize<'t>(&self, tags: impl Tags<'t>) -> Vec<(usize, Option<usize>)> {
         let mut tokens = Vec::new();
-        for (key, value) in tags.into_iter() {
+        for (key, value) in tags {
             let Some(key) = self.find(key) else {
                 continue;
             };
