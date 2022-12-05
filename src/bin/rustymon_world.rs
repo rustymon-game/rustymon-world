@@ -1,5 +1,4 @@
 use clap::{Parser, ValueEnum};
-use rustymon_world::features::config::ConfigParser;
 use rustymon_world::{parse, Config};
 
 #[derive(ValueEnum, Debug, Copy, Clone, Default)]
@@ -78,7 +77,13 @@ fn main() -> Result<(), String> {
     } else {
         include_str!("sample.config").to_string()
     };
-    let visual = ConfigParser::borrowing()
+
+    #[cfg(feature = "yada")]
+    let visual = rustymon_world::features::yada::YadaParser::from_file(&visual_config)
+        .ok_or_else(|| "Couldn't read config")?;
+
+    #[cfg(not(feature = "yada"))]
+    let visual = rustymon_world::features::config::ConfigParser::borrowing()
         .parse_file(&visual_config)
         .map_err(|err| format!("{err:?}"))?;
 

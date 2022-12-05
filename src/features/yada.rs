@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::path::Path;
 
 use yada::builder::DoubleArrayBuilder;
 use yada::DoubleArray;
@@ -73,11 +72,10 @@ impl FeatureParser for YadaParser {
 }
 
 impl YadaParser {
-    pub fn from_file(path: impl AsRef<Path>) -> Option<Self> {
-        let content = std::fs::read_to_string(path).ok()?;
+    pub fn from_file(file: &str) -> Option<Self> {
         let mut tokens = Tokens::default();
         let parser = ConfigParser::new(|string| tokens.get_or_insert(string));
-        let ast = parser.parse_file(&content).ok()?;
+        let ast = parser.parse_file(&file).ok()?;
         let tokenizer = tokens.finish().ok()?;
         Some(Self { tokenizer, ast })
     }
