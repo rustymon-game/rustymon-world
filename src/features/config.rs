@@ -14,23 +14,23 @@ use super::pest_ext::PairsExt;
 struct Grammar;
 
 /// The AST representing a config file.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Ast<T> {
     /// The `[Areas]` block
-    areas: Vec<Branch<T>>,
+    pub areas: Vec<Branch<T>>,
 
     /// The `[Nodes]` block
-    nodes: Vec<Branch<T>>,
+    pub nodes: Vec<Branch<T>>,
 
     /// The `[Ways]` block
-    ways: Vec<Branch<T>>,
+    pub ways: Vec<Branch<T>>,
 }
 
 /// A matching branch maps a condition to a result.
 #[derive(Debug)]
 pub struct Branch<T> {
     /// The branch's result
-    pub id: u32,
+    pub id: usize,
 
     /// The branch's condition
     pub expr: Expr<T>,
@@ -115,7 +115,11 @@ where
         if let Some(file) = matches.next() {
             self.handle_file(file)
         } else {
-            Ok(Ast::default())
+            Ok(Ast {
+                areas: Vec::new(),
+                nodes: Vec::new(),
+                ways: Vec::new(),
+            })
         }
     }
 

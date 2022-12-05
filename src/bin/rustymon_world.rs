@@ -1,5 +1,5 @@
 use clap::{Parser, ValueEnum};
-use rustymon_world::features::simple::SimpleVisual;
+use rustymon_world::features::config::ConfigParser;
 use rustymon_world::{parse, Config};
 
 #[derive(ValueEnum, Debug, Copy, Clone, Default)]
@@ -73,12 +73,14 @@ fn main() -> Result<(), String> {
         format,
     } = Args::parse();
 
-    let visual = if let Some(visual) = visual {
-        let file = std::fs::File::open(visual).map_err(|err| err.to_string())?;
-        serde_json::from_reader(file).map_err(|err| err.to_string())?
+    let visual_config = if let Some(visual) = visual {
+        std::fs::read_to_string(visual).map_err(|err| err.to_string())?
     } else {
-        SimpleVisual::default()
+        include_str!("sample.config").to_string()
     };
+    let visual = ConfigParser::borrowing()
+        .parse_file(&visual_config)
+        .map_err(|err| format!("{err:?}"))?;
 
     let config = Config {
         file,

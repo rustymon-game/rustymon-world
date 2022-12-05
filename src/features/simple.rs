@@ -1,90 +1,72 @@
-use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::hash::Hash;
 
+use crate::features::config::{Ast, Branch, Expr, Lookup};
 use crate::features::{FeatureParser, Tags};
 
-/// Simple parser for visual types
-#[derive(Serialize, Deserialize, Default, Debug)]
-pub struct SimpleVisual {
-    pub areas: Vec<Branch<String>>,
-    pub nodes: Vec<Branch<String>>,
-    pub ways: Vec<Branch<String>>,
-}
-
-pub type Branch<T> = (HashMap<T, Pattern<T>>, usize);
-
-#[derive(Deserialize, Serialize, Default, Debug)]
-#[serde(untagged)]
-pub enum Pattern<T: Eq + Hash> {
-    #[default]
-    Any,
-    Single(T),
-    Set(HashSet<T>),
-}
-
-impl FeatureParser for SimpleVisual {
+impl FeatureParser for Ast<&str> {
     type AreaFeature = usize;
     type NodeFeature = usize;
     type WayFeature = usize;
 
-    fn area<'t>(&self, tags: impl Tags<'t>) -> Option<Self::AreaFeature> {
-        parse_tags(tags, &self.areas)
+    fn area<'t>(&self, area: impl Tags<'t>) -> Option<Self::AreaFeature> {
+        Self::parse_tags(&self.areas, area)
     }
 
-    fn node<'t>(&self, tags: impl Tags<'t>) -> Option<Self::NodeFeature> {
-        parse_tags(tags, &self.nodes)
+    fn node<'t>(&self, node: impl Tags<'t>) -> Option<Self::NodeFeature> {
+        Self::parse_tags(&self.nodes, node)
     }
 
-    fn way<'t>(&self, tags: impl Tags<'t>) -> Option<Self::WayFeature> {
-        parse_tags(tags, &self.ways)
+    fn way<'t>(&self, way: impl Tags<'t>) -> Option<Self::WayFeature> {
+        Self::parse_tags(&self.ways, way)
     }
 }
 
-/// Parse tags using the simple "match-ish" format
-///
-/// ## Generics:
-/// This method is generic over the **K**ey and **V**alue used to form the tags
-/// as well as their **O**wned and **B**orrowed versions.
-pub(crate) fn parse_tags<'a, Iter, KO, KB, VO, VB>(
-    tags: Iter,
-    lookup: &[(HashMap<KO, Pattern<VO>>, usize)],
-) -> Option<usize>
-where
-    Iter: IntoIterator<Item = (&'a KB, &'a VB)>,
-    KO: Eq + Hash + Borrow<KB>,
-    KB: Eq + Hash + ?Sized + 'a,
-    VO: Eq + Hash + Borrow<VB>,
-    VB: Eq + Hash + ?Sized + 'a,
-{
-    let tags: HashMap<&'a KB, &'a VB> = HashMap::from_iter(tags);
-
-    for (map, result) in lookup {
-        let mut matches = true;
-        for (exp_key, exp_value) in map {
-            if let Some(&tag_value) = tags.get(exp_key.borrow()) {
-                match exp_value {
-                    Pattern::Any => continue,
-                    Pattern::Single(exp_value) if exp_value.borrow() == tag_value => continue,
-                    Pattern::Set(exp_values) if exp_values.contains(tag_value) => continue,
-                    _ => {
-                        matches = false;
-                        break;
-                    }
-                }
-            } else {
-                matches = false;
-                break;
+impl<'i> Ast<&'i str> {
+    fn parse_tags<'t, 'm>(statements: &[Branch<&'i str>], tags: impl Tags<'t>) -> Option<usize>
+    where
+        't: 'm,
+        'i: 'm,
+    {
+        let tags: HashMap<&'m str, &'m str> =
+            HashMap::from_iter(tags.into_iter().map(|(k, v)| (k.borrow(), v.borrow())));
+        for statement in statements {
+            if eval_expr(&statement.expr, &tags) {
+                return Some(statement.id);
             }
         }
+        None
+    }
+}
 
-        if matches {
-            return Some(*result);
-        } else {
-            continue;
+pub(crate) fn eval_expr<E, T>(expr: &Expr<E>, tags: &HashMap<T, T>) -> bool
+where
+    E: Eq + Hash, // `expr`'s tree contains a HashSet<E>
+    E: Borrow<T>, // Expr::Lookup contains `key` of type E which is used to index `tags`
+    T: Eq + Hash, // `tags` is a HashMap<T, T>
+{
+    match expr {
+        Expr::Not(expr) => !eval_expr(expr, tags),
+        Expr::And(list) => list.iter().all(|expr| eval_expr(expr, tags)),
+        Expr::Or(list) => list.iter().any(|expr| eval_expr(expr, tags)),
+        Expr::Lookup(lookup) => {
+            let key = match lookup {
+                Lookup::Any { key } => key,
+                Lookup::Single { key, .. } => key,
+                Lookup::List { key, .. } => key,
+            }
+            .borrow();
+            let Some(tag_value) = tags.get(key) else {return false;};
+            match lookup {
+                Lookup::Any { .. } => true,
+                Lookup::Single {
+                    value: exp_value, ..
+                } => exp_value.borrow() == tag_value,
+                Lookup::List {
+                    values: pos_values, ..
+                } => pos_values.contains(tag_value),
+            }
         }
     }
-
-    None
 }
