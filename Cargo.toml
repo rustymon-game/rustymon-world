@@ -12,10 +12,6 @@ name = "get_tag_samples"
 required-features = ["message-pack"]
 
 [[bench]]
-name = "tag_list"
-harness = false
-
-[[bench]]
 name = "feature_parser"
 harness = false
 
