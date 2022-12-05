@@ -1,0 +1,35 @@
+file = { block* }
+
+block = { "[" ~ (areas | nodes | ways) ~ "]" ~ (statement)* }
+    areas = { "Areas" }
+    nodes = { "Nodes" }
+    ways = { "Ways" }
+
+statement = { number ~ ":" ~ expr }
+
+number = @{ ASCII_DIGIT+ }
+
+expr = { not | or | and | lookup }
+    not = { "not" ~ "(" ~ expr ~ ")" }
+    or = { "or" ~ "(" ~ expr ~ ("," ~ expr)+ ~ ","? ~ ")" }
+    and = { "and" ~ "(" ~ expr ~ ("," ~ expr)+ ~ ","? ~ ")" }
+
+lookup = { any | single | list }
+    any = { string ~ "exists" }
+    single = { string ~ "is" ~ string }
+    list = { string ~ "in" ~ "[" ~ (string ~ ",")+ ~ string ~ ","? ~  "]" }
+
+// Copied from json example
+string = ${ "\"" ~ inner ~ "\"" }
+inner = @{ char* }
+char = {
+    !("\"" | "\\") ~ ANY
+    | "\\" ~ ("\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t")
+    | "\\" ~ ("u" ~ ASCII_HEX_DIGIT{4})
+}
+
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+COMMENT = _{
+    ("/*" ~ (!"*/" ~ ANY)* ~ "*/")
+    | ("//" ~ (!NEWLINE ~ ANY)* ~ NEWLINE)
+}

@@ -4,6 +4,8 @@
 
 #[cfg(feature = "aho-corasick")]
 pub mod aho_corasick;
+pub mod config;
+pub mod pest_ext;
 pub mod simple;
 
 /// Trait alias for a `IntoIterator` over pairs of `&'t str`

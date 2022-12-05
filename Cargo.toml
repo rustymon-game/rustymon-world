@@ -19,6 +19,8 @@ message-pack = ["rmp-serde"]
 [dependencies]
 # Fast pre parsing of tags
 aho-corasick = { version = "~0.7", optional = true }
+pest = { version = "~2.5" }
+pest_derive = { version = "~2.5" }
 
 # Used in grid.rs to store intersections on the stack while using a Vec like interface
 smallvec = { version = "1.9" }
