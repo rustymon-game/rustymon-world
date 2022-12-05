@@ -1,12 +1,15 @@
-file = { block* }
+file = { SOI ~ block* ~ EOI }
 
 block = { "[" ~ (areas | nodes | ways) ~ "]" ~ (statement)* }
     areas = { "Areas" }
     nodes = { "Nodes" }
     ways = { "Ways" }
 
-statement = { number ~ ":" ~ expr }
+statement = { branch | alias }
+    branch = { (identifier | number) ~ ":" ~ expr }
+    alias = { identifier ~ "=" ~ number }
 
+identifier = @{ ASCII_ALPHA ~ ASCII_ALPHANUMERIC* }
 number = @{ ASCII_DIGIT+ }
 
 expr = { not | or | and | lookup }
