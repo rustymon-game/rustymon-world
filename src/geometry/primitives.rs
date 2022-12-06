@@ -105,6 +105,7 @@ pub trait Ordering: Copy {
 /// Select points whose coordinates are greater than a certain value
 ///
 /// ```
+/// # use rustymon_world::geometry::primitives::{Gt, Ordering};
 /// # let (p, q) = (0.0, 0.0);
 /// assert_eq!(
 ///     Gt::cmp(p, q),
@@ -122,6 +123,7 @@ impl Ordering for Gt {
 /// Select points whose coordinates are less than a certain value
 ///
 /// ```
+/// # use rustymon_world::geometry::primitives::{Lt, Ordering};
 /// # let (p, q) = (0.0, 0.0);
 /// assert_eq!(
 ///     Lt::cmp(p, q),
@@ -146,6 +148,7 @@ pub trait Coord: Copy {
 /// Select a point's x coordinate:
 ///
 /// ```
+/// # use rustymon_world::geometry::primitives::{X, Coord};
 /// # let point = nalgebra::Vector2::zeros();
 /// assert_eq!(
 ///     X::get(point),
@@ -163,6 +166,7 @@ impl Coord for X {
 /// Select a point's y coordinate:
 ///
 /// ```
+/// # use rustymon_world::geometry::primitives::{Y, Coord};
 /// # let point = nalgebra::Vector2::zeros();
 /// assert_eq!(
 ///     Y::get(point),

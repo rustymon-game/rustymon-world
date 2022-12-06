@@ -20,4 +20,10 @@ fn main() {
         }
     };
     println!("{config:#?}");
+
+    // The following prints the most interesting branch from sample.config
+    if let Some(branch) = config.nodes.get(1) {
+        let simple_ast = rustymon_world::features::simplify::simplify(&branch.expr);
+        println!("{simple_ast:#?}");
+    }
 }

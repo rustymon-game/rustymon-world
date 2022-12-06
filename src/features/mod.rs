@@ -5,6 +5,7 @@
 pub mod config;
 pub mod pest_ext;
 pub mod simple;
+pub mod simplify;
 #[cfg(feature = "yada")]
 pub mod yada;
 

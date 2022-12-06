@@ -1,5 +1,8 @@
+#[cfg(not(feature = "binary"))]
+compile_error!("Requires feature: 'binary'");
+
 use clap::{Parser, ValueEnum};
-use rustymon_world::{parse, Config};
+use rustymon_world::{features, parse, Config};
 
 #[derive(ValueEnum, Debug, Copy, Clone, Default)]
 pub enum Format {
@@ -79,11 +82,11 @@ fn main() -> Result<(), String> {
     };
 
     #[cfg(feature = "yada")]
-    let visual = rustymon_world::features::yada::YadaParser::from_file(&visual_config)
+    let visual: features::yada::YadaParser = features::yada::YadaParser::from_file(&visual_config)
         .ok_or_else(|| "Couldn't read config")?;
 
     #[cfg(not(feature = "yada"))]
-    let visual = rustymon_world::features::config::ConfigParser::borrowing()
+    let visual = features::config::ConfigParser::borrowing()
         .parse_file(&visual_config)
         .map_err(|err| format!("{err:?}"))?;
 
