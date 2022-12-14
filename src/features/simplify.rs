@@ -1,6 +1,13 @@
-use crate::features::config::{Expr, Lookup};
+//! An [AST](SimpleExpr) for binary expressions which can be ["simplified"](simplify)
+
 use std::marker::PhantomData;
 
+use crate::features::config::{Expr, Lookup};
+
+/// An AST for binary expressions
+///
+/// Each [leave](SimpleExpr::Terminal) is a generic `T` which represents some operation producing booleans.
+/// The inner nodes are [Not](SimpleExpr::Not), [And](SimpleExpr::And) and [Or](SimpleExpr::Or).
 #[derive(Clone, Debug, PartialEq)]
 pub enum SimpleExpr<T: Copy> {
     /// This value is a temporary replacement and should never appear in the tree outside of its methods.
@@ -164,6 +171,12 @@ impl<T: Copy> SimpleExpr<(T, Option<T>)> {
     }
 }
 
+/// Simplify the branches' ASTs produced by [ConfigParser].
+///
+/// After simplification the AST is guaranteed of the following shape:
+/// - [Not](SimpleExpr::Not) may only contain [leaves](SimpleExpr::Terminal)
+/// - [And](SimpleExpr::And) may only contain [Nots](SimpleExpr::Not) or [leaves](SimpleExpr::Terminal)
+/// - [Or](SimpleExpr::Or) may not contain another [Or](SimpleExpr::Or)
 pub fn simplify<T: Copy>(expr: &Expr<T>) -> SimpleExpr<(T, Option<T>)> {
     let mut expr = SimpleExpr::from_config(expr);
 

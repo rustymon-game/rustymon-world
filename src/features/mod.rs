@@ -2,6 +2,7 @@
 //!
 //! For example turn a real world shop into a virtual world one
 
+pub mod automaton;
 pub mod config;
 pub mod pest_ext;
 pub mod simple;
