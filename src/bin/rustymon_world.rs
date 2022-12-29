@@ -100,7 +100,7 @@ fn main() -> Result<(), String> {
         visual,
     };
 
-    let tiles = parse(config).map_err(|err| err.to_string());
+    let tiles = parse(config).map_err(|err| err.to_string())?;
 
     format.write(std::io::stdout(), &tiles)?;
 

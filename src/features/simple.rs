@@ -6,19 +6,17 @@ use crate::features::config::{Ast, Branch, Expr, Lookup};
 use crate::features::{FeatureParser, Tags};
 
 impl FeatureParser for Ast<&str> {
-    type AreaFeature = usize;
-    type NodeFeature = usize;
-    type WayFeature = usize;
+    type Feature = usize;
 
-    fn area<'t>(&self, area: impl Tags<'t>) -> Option<Self::AreaFeature> {
+    fn area<'t>(&self, area: impl Tags<'t>) -> Option<Self::Feature> {
         Self::parse_tags(&self.areas, area)
     }
 
-    fn node<'t>(&self, node: impl Tags<'t>) -> Option<Self::NodeFeature> {
+    fn node<'t>(&self, node: impl Tags<'t>) -> Option<Self::Feature> {
         Self::parse_tags(&self.nodes, node)
     }
 
-    fn way<'t>(&self, way: impl Tags<'t>) -> Option<Self::WayFeature> {
+    fn way<'t>(&self, way: impl Tags<'t>) -> Option<Self::Feature> {
         Self::parse_tags(&self.ways, way)
     }
 }

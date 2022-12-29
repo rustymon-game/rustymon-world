@@ -54,19 +54,17 @@ pub struct YadaParser {
 }
 
 impl FeatureParser for YadaParser {
-    type AreaFeature = usize;
-    type NodeFeature = usize;
-    type WayFeature = usize;
+    type Feature = usize;
 
-    fn area<'t>(&self, area: impl Tags<'t>) -> Option<Self::AreaFeature> {
+    fn area<'t>(&self, area: impl Tags<'t>) -> Option<Self::Feature> {
         self.parse_tags(&self.ast.areas, area)
     }
 
-    fn node<'t>(&self, node: impl Tags<'t>) -> Option<Self::NodeFeature> {
+    fn node<'t>(&self, node: impl Tags<'t>) -> Option<Self::Feature> {
         self.parse_tags(&self.ast.nodes, node)
     }
 
-    fn way<'t>(&self, way: impl Tags<'t>) -> Option<Self::WayFeature> {
+    fn way<'t>(&self, way: impl Tags<'t>) -> Option<Self::Feature> {
         self.parse_tags(&self.ast.ways, way)
     }
 }

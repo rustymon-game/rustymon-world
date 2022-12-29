@@ -19,13 +19,13 @@ pub struct WorldGenerator<P: Projection, V: FeatureParser> {
 
     // Grid
     pub grid: Grid,
-    pub tiles: Vec<Tile<usize>>,
+    pub tiles: Vec<Tile<V::Feature>>,
 
     // Current visual types
     pub visual_parser: V,
-    pub area_type: V::AreaFeature,
-    pub node_type: V::NodeFeature,
-    pub way_type: V::WayFeature,
+    pub area_type: V::Feature,
+    pub node_type: V::Feature,
+    pub way_type: V::Feature,
 }
 
 impl<P: Projection, V: FeatureParser> WorldGenerator<P, V> {
@@ -92,7 +92,7 @@ impl<P: Projection, V: FeatureParser> WorldGenerator<P, V> {
         }
     }
 
-    pub fn into_tiles(self) -> Vec<Tile<usize>> {
+    pub fn into_tiles(self) -> Vec<Tile<V::Feature>> {
         self.tiles
     }
 
@@ -105,7 +105,7 @@ impl<P: Projection, V: FeatureParser> WorldGenerator<P, V> {
 
 impl<P: Projection, V: FeatureParser> Handler for WorldGenerator<P, V>
 where
-    V: FeatureParser<AreaFeature = usize, NodeFeature = usize, WayFeature = usize>,
+    V::Feature: Clone,
 {
     fn area(&mut self, area: &Area) {
         if area.tags().is_empty() {
@@ -151,7 +151,7 @@ where
             self.grid.clip_polygon(polygon, |index, polygon| {
                 if let Some(tile) = self.tiles.get_mut(index) {
                     if !polygon.is_empty() {
-                        tile.add_area(polygon, self.area_type);
+                        tile.add_area(polygon, self.area_type.clone());
                     }
                 }
             });
@@ -171,7 +171,7 @@ where
         if let Some(point) = self.projection.project(node) {
             self.grid.clip_point(point, |index, point| {
                 if let Some(tile) = self.tiles.get_mut(index) {
-                    tile.add_node(point, self.node_type);
+                    tile.add_node(point, self.node_type.clone());
                 }
             });
         }
@@ -202,7 +202,7 @@ where
         self.grid
             .clip_path(Self::iter_nodes(self.projection, nodes), |index, path| {
                 if let Some(tile) = self.tiles.get_mut(index) {
-                    tile.add_way(path, self.way_type);
+                    tile.add_way(path, self.way_type.clone());
                 }
             });
     }

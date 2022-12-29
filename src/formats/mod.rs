@@ -70,7 +70,7 @@ impl<Feature> Tile<Feature> {
 }
 
 /// Implement construction process
-impl Tile<usize> {
+impl<Feature> Tile<Feature> {
     pub fn new(bbox: BBox) -> Self {
         Tile {
             min: bbox.min,
@@ -82,7 +82,7 @@ impl Tile<usize> {
         }
     }
 
-    pub fn add_area(&mut self, area: &[Point], feature: usize) {
+    pub fn add_area(&mut self, area: &[Point], feature: Feature) {
         let start = self.points.len();
         self.points.extend_from_slice(area);
         let end = self.points.len();
@@ -93,7 +93,7 @@ impl Tile<usize> {
         });
     }
 
-    pub fn add_node(&mut self, node: Point, feature: usize) {
+    pub fn add_node(&mut self, node: Point, feature: Feature) {
         let index = self.points.len();
         self.points.push(node);
         self.nodes.push(Item {
@@ -103,7 +103,7 @@ impl Tile<usize> {
         });
     }
 
-    pub fn add_way(&mut self, way: &[Point], feature: usize) {
+    pub fn add_way(&mut self, way: &[Point], feature: Feature) {
         let start = self.points.len();
         self.points.extend_from_slice(way);
         let end = self.points.len();

@@ -18,22 +18,23 @@ impl Parser {
             &config
                 .keys()
                 .enumerate()
-                .map(|(i, k)| (k, i as u32))
+                .map(|(i, k)| (k.as_str(), i as u32))
                 .collect::<Vec<(&str, u32)>>(),
         )?);
 
-        let mut values = config
+        let values = config
             .values()
             .map(|values| {
-                DoubleArray::new(DoubleArrayBuilder::build(
+                DoubleArrayBuilder::build(
                     &values
                         .iter()
                         .enumerate()
-                        .map(|(i, v)| (v, i as u32))
+                        .map(|(i, v)| (v.as_str(), i as u32))
                         .collect::<Vec<(&str, u32)>>(),
-                ))
+                )
+                .map(DoubleArray::new)
             })
-            .collect();
+            .collect::<Option<Vec<_>>>()?;
 
         Some(Self { keys, values })
     }
@@ -47,26 +48,24 @@ impl Parser {
                 }
             }
         }
-        !feature.is_empty().then_some(feature)
+        (!feature.is_empty()).then_some(feature)
     }
 }
 
 type Feature = Vec<(u32, u32)>;
 
 impl FeatureParser for Parser {
-    type AreaFeature = Feature;
-    type NodeFeature = Feature;
-    type WayFeature = Feature;
+    type Feature = Feature;
 
-    fn area<'t>(&self, area: impl Tags<'t>) -> Option<Self::AreaFeature> {
+    fn area<'t>(&self, area: impl Tags<'t>) -> Option<Self::Feature> {
         self.parse(area)
     }
 
-    fn node<'t>(&self, node: impl Tags<'t>) -> Option<Self::NodeFeature> {
+    fn node<'t>(&self, node: impl Tags<'t>) -> Option<Self::Feature> {
         self.parse(node)
     }
 
-    fn way<'t>(&self, way: impl Tags<'t>) -> Option<Self::WayFeature> {
+    fn way<'t>(&self, way: impl Tags<'t>) -> Option<Self::Feature> {
         self.parse(way)
     }
 }
