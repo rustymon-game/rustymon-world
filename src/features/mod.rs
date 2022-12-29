@@ -8,7 +8,6 @@ pub mod pest_ext;
 pub mod prototyping;
 pub mod simple;
 pub mod simplify;
-#[cfg(feature = "yada")]
 pub mod yada;
 
 /// Trait alias for a `IntoIterator` over pairs of `&'t str`

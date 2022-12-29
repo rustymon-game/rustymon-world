@@ -1,11 +1,12 @@
 //! This feature and parser is intended to be used while prototyping to visualize unoptimised spawn rules.
 
-use crate::features::{FeatureParser, Tags};
 use linear_map::LinearMap;
 use yada::builder::DoubleArrayBuilder;
 use yada::DoubleArray;
 
-struct Parser {
+use crate::features::{FeatureParser, Tags};
+
+pub struct Parser {
     keys: DoubleArray<Vec<u8>>,
     values: Vec<DoubleArray<Vec<u8>>>,
 }
@@ -14,29 +15,30 @@ impl Parser {
     pub fn from_file(file: &str) -> Option<Self> {
         let config: LinearMap<String, Vec<String>> = serde_json::from_str(file).ok()?;
 
-        let keys = DoubleArray::new(DoubleArrayBuilder::build(
-            &config
-                .keys()
+        let mut keys: Vec<_> = config
+            .keys()
+            .enumerate()
+            .map(|(i, k)| (k.as_str(), i as u32))
+            .collect();
+        keys.sort_by_key(|(k, _)| *k);
+
+        let mut parser = Self {
+            keys: DoubleArray::new(DoubleArrayBuilder::build(&keys)?),
+            values: Vec::with_capacity(config.values().len()),
+        };
+
+        for values in config.values() {
+            let mut values: Vec<_> = values
+                .iter()
                 .enumerate()
-                .map(|(i, k)| (k.as_str(), i as u32))
-                .collect::<Vec<(&str, u32)>>(),
-        )?);
+                .map(|(i, v)| (v.as_str(), i as u32))
+                .collect();
+            values.sort_by_key(|(v, _)| *v);
+            let values = DoubleArrayBuilder::build(&values)?;
+            parser.values.push(DoubleArray::new(values));
+        }
 
-        let values = config
-            .values()
-            .map(|values| {
-                DoubleArrayBuilder::build(
-                    &values
-                        .iter()
-                        .enumerate()
-                        .map(|(i, v)| (v.as_str(), i as u32))
-                        .collect::<Vec<(&str, u32)>>(),
-                )
-                .map(DoubleArray::new)
-            })
-            .collect::<Option<Vec<_>>>()?;
-
-        Some(Self { keys, values })
+        Some(parser)
     }
 
     fn parse<'t>(&self, tags: impl Tags<'t>) -> Option<Feature> {
