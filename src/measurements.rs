@@ -184,7 +184,10 @@ pub trait Measureable: Default + Copy + PartialOrd + AddAssign<Self> + Debug {
 }
 impl Measureable for Duration {
     type Avg = Self;
-    fn avg(self, count: u32) -> Self::Avg {
+    fn avg(self, mut count: u32) -> Self::Avg {
+        if count == 0 {
+            count = 1
+        }
         self / count as u32
     }
 }
@@ -193,7 +196,10 @@ macro_rules! impl_numeric {
         $(
             impl Measureable for $T {
                 type Avg = f64;
-                fn avg(self, count: u32) -> Self::Avg {
+                fn avg(self, mut count: u32) -> Self::Avg {
+                    if count == 0 {
+                        count = 1
+                    }
                     self as f64 / count as f64
                 }
             }

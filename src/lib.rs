@@ -28,7 +28,7 @@ pub struct Config<Visual: FeatureParser> {
 pub fn parse<Visual>(config: Config<Visual>) -> Result<Vec<formats::Tile<Visual::Feature>>, String>
 where
     Visual: FeatureParser,
-    Visual::Feature: Clone,
+    Visual::Feature: Clone + Default,
 {
     let Config {
         file,

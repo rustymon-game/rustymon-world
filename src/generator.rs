@@ -35,7 +35,10 @@ impl<P: Projection, V: FeatureParser> WorldGenerator<P, V> {
         zoom: u8,
         visual_parser: V,
         projection: P,
-    ) -> Self {
+    ) -> Self
+    where
+        V::Feature: Default,
+    {
         // A tiles size in the map's coordinates
         let step_size = 1.0 / (1 << zoom) as f64;
         let step_size = Vector2::new(step_size, step_size);
@@ -86,13 +89,16 @@ impl<P: Projection, V: FeatureParser> WorldGenerator<P, V> {
             tiles,
 
             visual_parser,
-            area_type: unsafe { std::mem::MaybeUninit::uninit().assume_init() }, // Only every read
-            node_type: unsafe { std::mem::MaybeUninit::uninit().assume_init() }, // directly after
-            way_type: unsafe { std::mem::MaybeUninit::uninit().assume_init() },  // assignment.
+            area_type: Default::default(), // Only every read
+            node_type: Default::default(), // directly after
+            way_type: Default::default(),  // assignment.
         }
     }
 
     pub fn into_tiles(self) -> Vec<Tile<V::Feature>> {
+        std::mem::forget(self.area_type);
+        std::mem::forget(self.node_type);
+        std::mem::forget(self.way_type);
         self.tiles
     }
 
