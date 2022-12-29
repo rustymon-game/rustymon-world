@@ -28,6 +28,9 @@ yada = { version = "~0.5", optional = true }
 pest = { version = "~2.5" }
 pest_derive = { version = "~2.5" }
 
+# Order preserving map
+linear-map = { version = "1.2", features= ["serde"] }
+
 # Used in grid.rs to store intersections on the stack while using a Vec like interface
 smallvec = { version = "1.9" }
 

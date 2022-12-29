@@ -9,6 +9,7 @@ pub mod simple;
 pub mod simplify;
 #[cfg(feature = "yada")]
 pub mod yada;
+pub mod prototyping;
 
 /// Trait alias for a `IntoIterator` over pairs of `&'t str`
 pub trait Tags<'t>: IntoIterator<Item = (&'t str, &'t str)> {}

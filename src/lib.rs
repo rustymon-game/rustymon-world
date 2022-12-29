@@ -25,9 +25,9 @@ pub struct Config<Visual: FeatureParser> {
     pub visual: Visual,
 }
 
-pub fn parse<Visual>(config: Config<Visual>) -> Result<Vec<formats::Tile<usize>>, String>
+pub fn parse<Feature, Visual>(config: Config<Visual>) -> Result<Vec<formats::Tile<Feature>>, String>
 where
-    Visual: FeatureParser<AreaFeature = usize, NodeFeature = usize, WayFeature = usize>,
+    Visual: FeatureParser<AreaFeature = Feature, NodeFeature = Feature, WayFeature = Feature>,
 {
     let Config {
         file,
