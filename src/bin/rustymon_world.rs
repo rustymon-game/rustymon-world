@@ -58,7 +58,7 @@ struct Args {
 
     /// Config for assigning visual types
     #[clap(long)]
-    visual: Option<String>,
+    visual: String,
 }
 
 fn main() -> Result<(), String> {
@@ -75,6 +75,7 @@ fn main() -> Result<(), String> {
         format,
     } = Args::parse();
 
+    /* "Production prototype"
     let visual_config = if let Some(visual) = visual {
         std::fs::read_to_string(visual).map_err(|err| err.to_string())?
     } else {
@@ -89,6 +90,11 @@ fn main() -> Result<(), String> {
     let visual = features::config::ConfigParser::borrowing()
         .parse_file(&visual_config)
         .map_err(|err| format!("{err:?}"))?;
+    */
+
+    let visual = std::fs::read_to_string(visual).map_err(|err| err.to_string())?;
+    let visual = features::prototyping::Parser::from_file(&visual)
+        .ok_or_else(|| "Couldn't create visual parser from config".to_string())?;
 
     let config = Config {
         file,
