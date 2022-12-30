@@ -1,12 +1,15 @@
 use std::cell::RefCell;
 use std::marker::PhantomData;
+use std::sync::Arc;
 
+use crate::buffered::MultithreadedGenerator;
 use crate::features::FeatureParser;
 use libosmium::handler::{AreaAssemblerConfig, Handler};
 use nalgebra::Vector2;
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize, Serializer};
 
+pub mod buffered;
 pub mod features;
 pub mod formats;
 pub mod generator;
@@ -25,10 +28,12 @@ pub struct Config<Visual: FeatureParser> {
     pub visual: Visual,
 }
 
-pub fn parse<Visual>(config: Config<Visual>) -> Result<Vec<formats::Tile<Visual::Feature>>, String>
+pub fn parse<Visual: FeatureParser>(
+    config: Config<Visual>,
+) -> Result<Vec<formats::Tile<Visual::Feature>>, String>
 where
-    Visual: FeatureParser,
-    Visual::Feature: Clone + Default,
+    Visual: Send + Sync + 'static,
+    Visual::Feature: Default + Clone + Send + 'static,
 {
     let Config {
         file,
@@ -42,11 +47,15 @@ where
     let step_num = (cols, rows);
     let center = Vector2::new(center_x, center_y);
 
+    let visual = Arc::new(visual);
     let handler =
         generator::WorldGenerator::new(center, step_num, zoom, visual, projection::Simple);
+    let mut handler = MultithreadedGenerator::new(handler);
+    handler.spawn_workers(4);
 
-    let mut timed_handler = measurements::TimedHandler::new(handler);
-    timed_handler
+    //let mut timed_handler = measurements::TimedHandler::new(handler);
+    //timed_handler
+    handler
         .apply_with_areas(
             &file,
             AreaAssemblerConfig {
@@ -55,8 +64,8 @@ where
             },
         )
         .map_err(|error| error.into_string().unwrap())?;
-    timed_handler.print();
-    let handler = timed_handler.into_handler();
+    //timed_handler.print();
+    //let handler = timed_handler.into_handler();
 
     Ok(handler.into_tiles())
 }

@@ -1,3 +1,8 @@
+use libosmium::handler::Handler;
+use libosmium::node_ref_list::NodeRefList;
+use libosmium::{Area, Node, Way, PRECISION};
+use nalgebra::Vector2;
+
 use crate::features::FeatureParser;
 use crate::formats::Tile;
 use crate::geometry::bbox::GenericBox;
@@ -5,11 +10,8 @@ use crate::geometry::grid::Grid;
 use crate::geometry::polygon::combine_rings;
 use crate::geometry::{BBox, Point};
 use crate::projection::Projection;
-use libosmium::handler::Handler;
-use libosmium::node_ref_list::NodeRefList;
-use libosmium::{Area, Node, Way, PRECISION};
-use nalgebra::Vector2;
 
+#[derive(Clone)]
 pub struct WorldGenerator<P: Projection, V: FeatureParser> {
     pub int_box: GenericBox<i32>,
     pub projection: P,
@@ -147,11 +149,6 @@ where
             // Add the inner rings to the outer ring before clipping
             if num_rings > 0 {
                 combine_rings(&mut polygon, &mut self.rings[0..num_rings]);
-                log::info!(
-                    "Combined {} inner rings @ {}",
-                    num_rings,
-                    area.original_id()
-                );
             }
 
             self.grid.clip_polygon(polygon, |index, polygon| {

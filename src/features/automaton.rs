@@ -49,6 +49,7 @@ impl<T: Copy + Ord> Branch<T> {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Copy, Clone)]
 pub struct Atom<T: Copy> {
     key: T,

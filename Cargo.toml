@@ -39,21 +39,28 @@ nalgebra = { version = "0.31", features = ["serde-serialize"] }
 
 # Make the formats serializable
 serde = { version = "1.0", features = ["derive"] }
-serde_repr = { version = "0.1" } # used in the ...VisualType prototypes
 
 # Used in generator.rs to parse osm's pbf files
-libosmium = { version = "0.2.1", features = ["serde"] }
+libosmium = { version = "0.3.1", features = ["serde"] }
 
-# Produce json output and read config
-serde_json = { version = "1.0", optional = true }
+# Logging
+log = { version = "0.4" }
+
+# Channels for multithreading
+crossbeam-channel = { version = "0.5" }
+
+# For "binary" feature:
 
 # Cli parsing
 clap = { version = "~4.0", features = ["derive"], optional = true }
 
-# Logging
-log = { version = "0.4" }
+# Logger
 env_logger = { version = "0.10", optional = true }
 
+# Json output format and config files
+serde_json = { version = "1.0", optional = true }
+
+# MessagePack output format
 rmp-serde = { version = "~1.1", optional = true }
 
 [dev-dependencies]

@@ -7,6 +7,7 @@ use smallvec::SmallVec;
 pub type Index = Vector2<isize>;
 pub type IndexBox = GenericBox<isize>;
 
+#[derive(Clone)]
 pub struct Grid {
     /// The number of boxes in each direction
     boxes_num: Index,

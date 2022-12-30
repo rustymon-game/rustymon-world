@@ -19,7 +19,7 @@ impl GetLocation for NodeRef {
     }
 }
 
-pub trait Projection: Copy + 'static {
+pub trait Projection: Copy + Send + 'static {
     fn project(&self, point: &impl GetLocation) -> Option<Vector2<f64>> {
         point.get_location().map(|location| {
             let lambda = location.lon().to_radians();
