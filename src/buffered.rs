@@ -104,10 +104,26 @@ where
                 Ok(tiles) => tiles,
                 Err(error) => panic::resume_unwind(error),
             };
-            for (i, from) in tiles.into_iter().enumerate() {
+            for (i, mut from) in tiles.into_iter().enumerate() {
                 if let Some(to) = self.generator.tiles.get_mut(i) {
+                    let offset = to.points.len();
+                    to.points.extend(from.points.into_iter());
+
+                    from.areas.iter_mut().for_each(|area| {
+                        area.points.0 += offset;
+                        area.points.1 += offset;
+                    });
                     to.areas.extend(from.areas.into_iter());
+
+                    from.nodes.iter_mut().for_each(|node| {
+                        node.points += offset;
+                    });
                     to.nodes.extend(from.nodes.into_iter());
+
+                    from.ways.iter_mut().for_each(|way| {
+                        way.points.0 += offset;
+                        way.points.1 += offset;
+                    });
                     to.ways.extend(from.ways.into_iter());
                 } else {
                     error!("A worker contains tiles the base doesn't!");
