@@ -1,4 +1,4 @@
-//! Intersection and clipping primitives
+//! Intersecting and clipping on axis-aligned lines and half-planes.
 use super::{polygon, Point};
 
 /// A horizontal or vertical line

@@ -1,3 +1,5 @@
+//! Various function working with polygons
+
 use crate::geometry::primitives::{Line, X};
 use crate::geometry::Point;
 
