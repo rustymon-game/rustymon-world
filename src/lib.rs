@@ -2,12 +2,14 @@ use std::cell::RefCell;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use crate::buffered::MultithreadedGenerator;
-use crate::features::FeatureParser;
 use libosmium::handler::{AreaAssemblerConfig, Handler};
 use nalgebra::Vector2;
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize, Serializer};
+
+use crate::buffered::MultithreadedGenerator;
+use crate::features::FeatureParser;
+use crate::projection::Projection;
 
 pub mod buffered;
 pub mod features;
@@ -18,7 +20,7 @@ pub mod measurements;
 pub mod projection;
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Config<Visual: FeatureParser> {
+pub struct Config<Visual: FeatureParser, Prjctn: Projection> {
     pub file: String,
     pub cols: usize,
     pub rows: usize,
@@ -26,10 +28,11 @@ pub struct Config<Visual: FeatureParser> {
     pub center_y: f64,
     pub zoom: u8,
     pub visual: Visual,
+    pub projection: Prjctn,
 }
 
-pub fn parse<Visual: FeatureParser>(
-    config: Config<Visual>,
+pub fn parse<Visual: FeatureParser, Prjctn: Projection>(
+    config: Config<Visual, Prjctn>,
 ) -> Result<Vec<formats::Tile<Visual::Feature>>, String>
 where
     Visual: Send + Sync + 'static,
@@ -43,13 +46,13 @@ where
         center_x,
         center_y,
         visual,
+        projection,
     } = config;
     let step_num = (cols, rows);
     let center = Vector2::new(center_x, center_y);
 
     let visual = Arc::new(visual);
-    let handler =
-        generator::WorldGenerator::new(center, step_num, zoom, visual, projection::Simple);
+    let handler = generator::WorldGenerator::new(center, step_num, zoom, visual, projection);
     let mut handler = MultithreadedGenerator::new(handler);
     handler.spawn_workers(4);
 

@@ -46,7 +46,7 @@ impl Parser {
         for (key, value) in tags {
             if let Some(key) = self.keys.exact_match_search(key) {
                 if let Some(value) = self.values[key as usize].exact_match_search(value) {
-                    feature.push((key, value));
+                    feature.push([key, value]);
                 }
             }
         }
@@ -54,7 +54,7 @@ impl Parser {
     }
 }
 
-type Feature = Vec<(u32, u32)>;
+type Feature = Vec<[u32; 2]>;
 
 impl FeatureParser for Parser {
     type Feature = Feature;
